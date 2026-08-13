@@ -67,7 +67,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <div class="actions"><button class="primary" type="submit">💜 Salvar venda e enviar no WhatsApp</button><button class="ghost" type="button" id="cancelEditBtn" onclick="cancelEditSale()" style="display:none">Cancelar edição</button></div>
 </form></div>
 <div class="notice">Os preços são puxados dos produtos cadastrados. Você pode adicionar novos produtos em <strong>⚙️ Configurações → Produtos</strong>.</div>
-<h2 style="margin-top:24px">Últimos pedidos</h2><div id="salesList" class="list"></div>
+<h2 style="margin-top:24px">Vendas de hoje</h2><div id="salesList" class="list"></div>
 </section>
 <section id="clients">
 <h2>👥 Clientes</h2>
@@ -94,7 +94,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <h2>📊 Vendas</h2>
 <div class="grid"><div class="card"><div class="label">Total vendido</div><div class="value green" id="allRevenue">R$ 0,00</div></div><div class="card"><div class="label">Unidades</div><div class="value purple" id="allQty">0</div></div><div class="card"><div class="label">Ticket médio</div><div class="value purple" id="avgTicket">R$ 0,00</div></div><div class="card"><div class="label">Clientes</div><div class="value purple" id="customerCount">0</div></div><div class="card"><div class="label">Lucro do mês</div><div class="value green" id="monthProfitSales">R$ 0,00</div></div></div>
 <div style="height:14px"></div><div class="card"><div class="field"><label>Período do relatório</label><select id="reportPeriod" onchange="render()"><option value="today">Hoje</option><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="all">Todo o período</option></select></div><div style="height:12px"></div><div id="reportSummary" class="notice"></div></div>
-<div style="height:14px"></div><div class="top-actions"><button class="secondary" type="button" onclick="showTab('clients')">👥 Cadastrar / clientes</button></div><div style="height:14px"></div><div class="card"><div class="total"><div><div class="label">Hoje</div><h3>Vendas de hoje</h3></div><span>📅</span></div><div id="todaySalesList" class="list"></div></div><div style="height:14px"></div><div class="card"><div class="total"><div><div class="label">Histórico</div><h3>Vendas registradas</h3></div><span>🥤</span></div><div id="allSalesList" class="list"></div></div>
+<div style="height:14px"></div><div class="top-actions"><button class="secondary" type="button" onclick="showTab('clients')">👥 Cadastrar / clientes</button></div><div style="height:14px"></div><div class="card"><div class="total"><div><div class="label">Histórico</div><h3>Vendas do período</h3></div><span>🥤</span></div><div id="allSalesList" class="list"></div></div>
 <div class="top-actions"><button class="danger" onclick="clearSales()">Apagar vendas</button></div>
 </section>
 
@@ -107,7 +107,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 
 <section id="cash">
 <h2>💵 Caixa</h2>
-<div class="notice">💜 O valor dos produtos entra automaticamente no Caixa. A taxa de entrega de R$ 5,00 é enviada ao cliente, mas não entra no Caixa porque é destinada ao entregador.</div>
+<div class="notice">💜 Vendas registradas entram automaticamente no Caixa. Use o formulário abaixo para gastos ou outros movimentos.</div>
 <div style="height:12px"></div>
 <div class="card"><form onsubmit="addCash(event)"><div class="row"><div class="field"><label>Tipo</label><select id="cashType"><option value="Entrada">Entrada</option><option value="Saída">Saída</option></select></div><div class="field"><label>Valor</label><input id="cashValue" type="number" min="0" step=".01" required></div></div><div class="field"><label>Descrição</label><input id="cashDescription" type="text" placeholder="Ex.: compra de ingredientes"></div><button class="primary" type="submit">💰 Registrar movimento</button></form></div>
 <div style="height:14px"></div><div class="grid"><div class="card"><div class="label">Entradas</div><div class="value green" id="cashIn">R$ 0,00</div></div><div class="card"><div class="label">Saídas</div><div class="value red" id="cashOut">R$ 0,00</div></div><div class="card full"><div class="label">Saldo</div><div class="value purple" id="cashBalance">R$ 0,00</div></div></div>
@@ -140,8 +140,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 </nav>
 
 <script>
-const KEY="roxoManiaAtualizadoV6";
-const OLD_KEYS=["roxoManiaAtualizadoV5","roxoManiaAtualizadoV4","roxoManiaAtualizadoV3"];
+const KEY="roxoManiaAtualizadoV8";
+const OLD_KEYS=["roxoManiaAtualizadoV7","roxoManiaAtualizadoV6","roxoManiaAtualizadoV5","roxoManiaAtualizadoV4","roxoManiaAtualizadoV3"];
 const defaultProducts=[
  {id:"tradicional",name:"Tradicional",price:15,cost:8.48,category:"Açaí",active:true},
  {id:"leitinho",name:"Creme de leitinho",price:15,cost:11.48,category:"Açaí",active:true},
@@ -150,10 +150,29 @@ const defaultProducts=[
  {id:"morango",name:"Creme de morango",price:15,cost:10.98,category:"Açaí",active:true}
 ];
 const defaults={sales:[],cash:[],production:[],products:defaultProducts,clients:[],settings:{price:15,cost:10,goal:300,initialStock:0,lowStock:5,workingCapitalGoal:500}};
+function normalizePhoneForMigration(phone){let d=String(phone||"").replace(/\D/g,"");if(d.startsWith("00"))d=d.slice(2);if(d.startsWith("55"))return d;if(d.length===10||d.length===11)return"55"+d;return""}
 function normalizeData(base){
   const out={...defaults,...base,settings:{...defaults.settings,...(base.settings||{})}};
   out.products=Array.isArray(base.products)&&base.products.length?base.products:structuredClone(defaultProducts);
   out.clients=Array.isArray(base.clients)?base.clients:[];
+  // Reconstrói automaticamente o cadastro a partir das vendas antigas.
+  const byPhone=new Map();
+  const byName=new Map();
+  out.clients.forEach(c=>{
+    const w=normalizePhoneForMigration(c.phone);
+    if(w)byPhone.set(w,c);
+    if(c.name)byName.set(String(c.name).trim().toLowerCase(),c);
+  });
+  (base.sales||[]).forEach(s=>{
+    const name=String(s.customerName||"").trim(), phone=String(s.customerPhone||"").trim();
+    if(!name)return;
+    const w=normalizePhoneForMigration(phone);
+    let c=(w&&byPhone.get(w))||byName.get(name.toLowerCase());
+    if(!c){c={id:"c"+Date.now()+Math.random().toString(36).slice(2,7),name,phone,address:String(s.address||""),note:String(s.note||"")};out.clients.push(c);}
+    else{c.name=name||c.name;if(phone)c.phone=phone;if(s.address)c.address=s.address;if(s.note)c.note=s.note;}
+    if(w)byPhone.set(w,c);
+    byName.set(name.toLowerCase(),c);
+  });
   out.sales=(base.sales||[]).map(s=>{
     if(Array.isArray(s.items)&&s.items.length)return s;
     return {...s,items:[{productId:s.productId||String(s.flavor||"").toLowerCase(),name:s.flavor||"Produto",qty:Number(s.qty||1),price:Number(s.price||0),cost:Number(s.cost||out.settings.cost||10),total:Number(s.total||0)}]};
@@ -165,12 +184,14 @@ function loadData(){
   return normalizeData(structuredClone(defaults));
 }
 let data=loadData();
-repairSaleCashEntries();
+// Corrige entradas automáticas antigas: a taxa de entrega é repassada ao entregador e não pertence ao caixa.
+for(const s of data.sales){const ce=data.cash.find(x=>x.saleId===s.id);if(ce){const expected=Number(s.subtotal??s.total??0);if(Number(ce.value)!==expected){ce.value=expected;ce.description=`Venda • ${s.customerName||""} • ${(s.items||[]).map(i=>i.name).join(", ")} • ${s.payment||""}${Number(s.deliveryFee||0)>0?" • taxa de entrega repassada ao entregador":""}`;}}}
+save();
 let editingSaleId=null;
 const brl=v=>Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
 function save(){localStorage.setItem(KEY,JSON.stringify(data))}
-function today(){return new Date().toISOString().slice(0,10)}
+function today(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
 function dateBR(d){return d?new Date(d+"T12:00:00").toLocaleDateString("pt-BR"):""}
 function showTab(id){document.querySelectorAll("section").forEach(s=>s.classList.remove("show"));document.getElementById(id).classList.add("show");document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));const n=document.getElementById("n-"+id);if(n)n.classList.add("active");render();window.scrollTo({top:0,behavior:"smooth"})}
 function normalizeWhatsApp(phone){let d=String(phone||"").replace(/\D/g,"");if(d.startsWith("00"))d=d.slice(2);if(d.startsWith("55"))return d;if(d.length===10||d.length===11)return"55"+d;return""}
@@ -182,6 +203,7 @@ const DELIVERY_FEE=5;
 function getDeliveryFee(){return document.getElementById("deliveryMethod")?.value==="Entrega"?DELIVERY_FEE:0}
 function updateOrderTotal(){const items=orderItemsFromForm(),subtotal=items.reduce((a,i)=>a+i.total,0),fee=getDeliveryFee(),total=subtotal+fee;document.getElementById("orderTotal").textContent=brl(total);const feeInfo=document.getElementById("deliveryFeeInfo");if(feeInfo)feeInfo.textContent=`Taxa de entrega: ${brl(fee)}`;const qty=items.reduce((a,i)=>a+i.qty,0);document.getElementById("saleStockInfo").textContent=`Estoque disponível agora: ${stock()} garrafinha(s) • Este pedido: ${qty} unidade(s)`}
 
+function openWhatsApp(s){const w=normalizeWhatsApp(s?.customerPhone);if(!s||!w){alert("Esta venda não possui um WhatsApp válido.");return false}const url=`https://wa.me/${w}?text=${encodeURIComponent(whatsappMessage(s))}`;const a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener noreferrer";a.style.display="none";document.body.appendChild(a);a.click();a.remove();return true}
 function whatsappMessage(s){const lines=["💜 *Roxo Mania*","",`Olá, ${s.customerName}! Seu pedido foi registrado com sucesso. 🥤`,"","🧾 *Detalhes do pedido:*",...s.items.map(i=>`• ${i.qty}x ${i.name} — ${brl(i.total)}`),"",`💰 *Subtotal: ${brl(s.subtotal??s.total)}*`,s.deliveryFee?`🛵 *Taxa de entrega: ${brl(s.deliveryFee)}*`:"",`💰 *Total: ${brl(s.total)}*`,`• Pagamento: ${s.payment}`,`• ${s.delivery}${s.address?": "+s.address:""}`,s.note?`• Observação: ${s.note}`:"","",`📅 Data: ${dateBR(s.date)}`,"","Muito mais que açaí. Uma experiência. 💜"];return lines.filter(Boolean).join("\n")}
 function totalProduced(){return data.production.reduce((a,x)=>a+Number(x.qty||0),0)}
 function totalSold(){return data.sales.reduce((a,x)=>a+Number(x.qty||x.items?.reduce((z,i)=>z+i.qty,0)||0),0)}
@@ -205,16 +227,16 @@ function addSale(e){
  if(existingClient){existingClient.name=customerName;existingClient.phone=customerPhone;existingClient.address=address||existingClient.address||"";if(note)existingClient.note=note;}
  else data.clients.push({id:"c"+Date.now(),name:customerName,phone:customerPhone,address,note});
  const cashEntry=data.cash.find(x=>x.saleId===sale.id);
- if(cashEntry){cashEntry.date=date;cashEntry.value=subtotal;cashEntry.description=`Venda • ${customerName} • ${items.map(i=>i.name).join(", ")} • ${payment}`;}
- else data.cash.push({id:Date.now()+1,date,type:"Entrada",value:subtotal,description:`Venda • ${customerName} • ${items.map(i=>i.name).join(", ")} • ${payment}`,saleId:sale.id});
+ if(cashEntry){cashEntry.date=date;cashEntry.value=subtotal;cashEntry.description=`Venda • ${customerName} • ${items.map(i=>i.name).join(", ")} • ${payment}${deliveryFee?" • taxa de entrega repassada ao entregador":""}`;}
+ else data.cash.push({id:Date.now()+1,date,type:"Entrada",value:subtotal,description:`Venda • ${customerName} • ${items.map(i=>i.name).join(", ")} • ${payment}${deliveryFee?" • taxa de entrega repassada ao entregador":""}`,saleId:sale.id});
  save();
  editingSaleId=null;
  e.target.reset();document.getElementById("orderItems").innerHTML="";addOrderItem();saleDate.value=today();render();
- const waUrl=`https://wa.me/${whatsapp}?text=${encodeURIComponent(whatsappMessage(s))}`;
- window.location.assign(waUrl);
+ alert(oldSale?"Venda atualizada com sucesso! 💜":"Venda salva com sucesso! 💜");
+ if(whatsapp) location.href=`https://wa.me/${whatsapp}?text=${encodeURIComponent(whatsappMessage(s))}`;
 }
 function customerNameEl(){return document.getElementById("customerName")}function customerPhoneEl(){return document.getElementById("customerPhone")}
-function sendSaleWhatsApp(id){const s=data.sales.find(x=>x.id===id);const w=normalizeWhatsApp(s?.customerPhone);if(!s||!w){alert("Esta venda não possui um WhatsApp válido.");return}window.location.assign(`https://wa.me/${w}?text=${encodeURIComponent(whatsappMessage(s))}`)}
+function sendSaleWhatsApp(id){const s=data.sales.find(x=>x.id===id);openWhatsApp(s)}
 function editSale(id){
  const s=data.sales.find(x=>x.id===id);if(!s)return;
  editingSaleId=id;showTab("sell");
@@ -265,38 +287,22 @@ function addProduct(e){e.preventDefault();const name=productName.value.trim(),pr
 function toggleProduct(id){const p=productById(id);if(!p)return;p.active=p.active===false;save();render()}
 function removeProduct(id){if(!confirm("Remover este produto do cadastro? As vendas antigas serão preservadas."))return;data.products=data.products.filter(p=>p.id!==id);save();render()}
 function clearSales(){if(!confirm("Apagar todas as vendas e as entradas automáticas de venda do Caixa?"))return;const ids=new Set(data.sales.map(x=>x.id));data.sales=[];data.cash=data.cash.filter(x=>!ids.has(x.saleId));save();render()}
-function periodStart(){const p=reportPeriod?.value||"today";if(p==="all")return null;const d=new Date();d.setDate(d.getDate()-(Number(p)-1));return d.toISOString().slice(0,10)}
+function periodStart(){const p=reportPeriod?.value||"today";if(p==="all")return null;const d=new Date();d.setDate(d.getDate()-(Number(p)-1));return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
 function filteredSales(){const start=periodStart();return start?data.sales.filter(x=>x.date>=start):data.sales}
-function exportBackup(){const blob=new Blob([JSON.stringify({version:5,exportedAt:new Date().toISOString(),data},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="roxo-mania-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function exportBackup(){const blob=new Blob([JSON.stringify({version:8,exportedAt:new Date().toISOString(),data},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="roxo-mania-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 function importBackup(e){const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const obj=JSON.parse(r.result);if(!obj.data||!Array.isArray(obj.data.sales)||!Array.isArray(obj.data.production)||!Array.isArray(obj.data.cash))throw Error();data=normalizeData(obj.data);save();render();alert("Backup importado com sucesso! 💜")}catch(err){alert("Não foi possível importar esse backup.")}e.target.value=""};r.readAsText(f)}
 function monthKey(d){return String(d||"").slice(0,7)}
-function salesProfit(list){return list.reduce((a,s)=>a+Number(s.subtotal??s.total??0)-Number(s.costTotal||s.items?.reduce((z,i)=>z+i.cost*i.qty,0)||0),0)}
-function businessRevenue(list){return list.reduce((a,s)=>a+Number(s.subtotal??s.total??0),0)}
-function repairSaleCashEntries(){
-  let changed=false;
-  for(const s of data.sales){
-    const entry=data.cash.find(x=>x.saleId===s.id);
-    if(entry){
-      const expected=Number(s.subtotal??(Number(s.total||0)-Number(s.deliveryFee||0)));
-      if(Math.abs(Number(entry.value||0)-expected)>0.001){entry.value=expected;changed=true;}
-      if(entry.date!==s.date){entry.date=s.date;changed=true;}
-    }
-  }
-  if(changed)save();
-}
+function salesProfit(list){return list.reduce((a,s)=>a+Number(s.subtotal??s.total??0)-Number(s.costTotal??(s.items?.reduce((z,i)=>z+i.cost*i.qty,0)||0)),0)}
 function currentCashBalance(){const cin=data.cash.filter(x=>x.type==="Entrada").reduce((a,x)=>a+x.value,0),cout=data.cash.filter(x=>x.type==="Saída").reduce((a,x)=>a+x.value,0);return cin-cout}
 function workingCapital(){const avgCost=data.products.length?data.products.reduce((a,p)=>a+Number(p.cost||0),0)/data.products.length:Number(data.settings.cost||10);return Math.max(0,currentCashBalance())+Math.max(0,stock())*avgCost}
 function render(){
- const t=today(),ts=data.sales.filter(x=>x.date===t),revenue=businessRevenue(ts),qty=ts.reduce((a,x)=>a+x.qty,0),prod=data.production.filter(x=>x.date===t).reduce((a,x)=>a+x.qty,0),goal=Number(data.settings.goal)||0,pct=goal?Math.min(100,Math.round(revenue/goal*100)):0;
- const thisMonth=monthKey(t),ms=data.sales.filter(x=>monthKey(x.date)===thisMonth),monthRev=businessRevenue(ms),todayProfitValue=salesProfit(ts),monthProfitValue=salesProfit(ms),wc=workingCapital(),wcGoal=Number(data.settings.workingCapitalGoal)||0;
+ const t=today(),ts=data.sales.filter(x=>x.date===t),revenue=ts.reduce((a,x)=>a+x.total,0),qty=ts.reduce((a,x)=>a+x.qty,0),prod=data.production.filter(x=>x.date===t).reduce((a,x)=>a+x.qty,0),goal=Number(data.settings.goal)||0,pct=goal?Math.min(100,Math.round(revenue/goal*100)):0;
+ const thisMonth=monthKey(t),ms=data.sales.filter(x=>monthKey(x.date)===thisMonth),monthRev=ms.reduce((a,x)=>a+x.total,0),todayProfitValue=salesProfit(ts),monthProfitValue=salesProfit(ms),wc=workingCapital(),wcGoal=Number(data.settings.workingCapitalGoal)||0;
  todayText.textContent=new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"});todayRevenue.textContent=brl(revenue);todayQty.textContent=qty;goalValue.textContent=brl(goal);productionValue.textContent=prod;todayProfit.textContent=brl(todayProfitValue);monthProfit.textContent=brl(monthProfitValue);monthProfitSales.textContent=brl(monthProfitValue);workingCapital.textContent=brl(wc);goalPercent.textContent=pct+"%";goalBar.style.width=pct+"%";
- const st=stock();stockValue.textContent=st;productionStock.textContent=st;stockBadge.textContent=st<=0?"sem estoque":st<=Number(data.settings.lowStock||0)?"estoque baixo":"disponíveis";stockBadge.className="badge "+stockClass(st);stockNotice.textContent=st<=0?"⚠️ Estoque zerado. Registre uma produção antes de vender.":st<=Number(data.settings.lowStock||0)?`⚠️ Estoque baixo: restam ${st} garrafinha(s).`:"💜 Estoque calculado automaticamente: produção + estoque inicial − vendas.";saleStockInfo.textContent=`Estoque disponível agora: ${st} garrafinha(s)`;defaultPriceNotice.textContent=brl(data.settings.price);
- allRevenue.textContent=brl(businessRevenue(data.sales));allQty.textContent=totalSold();avgTicket.textContent=brl(data.sales.length?businessRevenue(data.sales)/data.sales.length:0);customerCount.textContent=new Set(data.sales.map(x=>x.customerName?.toLowerCase()).filter(Boolean)).size;
- const fs=filteredSales(),fr=businessRevenue(fs),fq=fs.reduce((a,x)=>a+x.qty,0),fp=salesProfit(fs);reportSummary.innerHTML=`<strong>${fs.length}</strong> pedido(s) • <strong>${fq}</strong> garrafinha(s) • <strong>${brl(fr)}</strong> faturados • <strong>${brl(fp)}</strong> de lucro estimado`;
- const saleHTML=data.sales.slice().reverse().slice(0,50).map(x=>{const names=(x.items||[]).map(i=>`${i.qty}x ${esc(i.name)}`).join(" • ");return `<div class="item"><div><strong>${esc(x.customerName||"")}</strong><small>${names}<br>${dateBR(x.date)} • ${x.payment?esc(x.payment):""}${x.delivery==="Entrega"?" • Entrega + R$ 5,00":""}</small></div><div style="text-align:right"><span class="badge green">${brl(x.total)}</span><div class="actions" style="margin-top:6px;justify-content:flex-end"><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editSale(${x.id})">✏️ Editar</button>${x.customerPhone?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="sendSaleWhatsApp(${x.id})">📲 WhatsApp</button>`:""}</div></div></div>`}).join("");salesList.innerHTML=saleHTML||`<div class="empty">Nenhum pedido registrado ainda. 💜</div>`;
-  const todayHTML=data.sales.filter(x=>x.date===t).slice().reverse().map(x=>{const names=(x.items||[]).map(i=>`${i.qty}x ${esc(i.name)}`).join(" • ");return `<div class="item"><div><strong>${esc(x.customerName||"")}</strong><small>${names}<br>${dateBR(x.date)} • ${x.payment?esc(x.payment):""}${x.delivery==="Entrega"?" • Entrega + R$ 5,00":""}</small></div><div style="text-align:right"><span class="badge green">${brl(x.total)}</span><div class="actions" style="margin-top:6px;justify-content:flex-end"><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editSale(${x.id})">✏️ Editar</button>${x.customerPhone?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="sendSaleWhatsApp(${x.id})">📲 WhatsApp</button>`:""}</div></div></div>`}).join("");
-  todaySalesList.innerHTML=todayHTML||`<div class="empty">Nenhuma venda hoje. 💜</div>`;
-  allSalesList.innerHTML=saleHTML||`<div class="empty">Nenhum pedido registrado ainda.</div>`;
+ const st=stock();stockValue.textContent=st;productionStock.textContent=st;stockBadge.textContent=st<=0?"sem estoque":st<=Number(data.settings.lowStock||0)?"estoque baixo":"disponíveis";stockBadge.className="badge "+stockClass(st);stockNotice.textContent=st<=0?"⚠️ Estoque zerado. Registre uma produção antes de vender.":st<=Number(data.settings.lowStock||0)?`⚠️ Estoque baixo: restam ${st} garrafinha(s).`:"💜 Estoque calculado automaticamente: produção + estoque inicial − vendas.";saleStockInfo.textContent=`Estoque disponível agora: ${st} garrafinha(s)`;const defaultNotice=document.getElementById("defaultPriceNotice");if(defaultNotice)defaultNotice.textContent=brl(data.settings.price);
+ allRevenue.textContent=brl(data.sales.reduce((a,x)=>a+x.total,0));allQty.textContent=totalSold();avgTicket.textContent=brl(data.sales.length?data.sales.reduce((a,x)=>a+x.total,0)/data.sales.length:0);customerCount.textContent=new Set(data.sales.map(x=>x.customerName?.toLowerCase()).filter(Boolean)).size;
+ const fs=filteredSales(),fr=fs.reduce((a,x)=>a+x.total,0),fq=fs.reduce((a,x)=>a+x.qty,0),fp=salesProfit(fs);reportSummary.innerHTML=`<strong>${fs.length}</strong> pedido(s) • <strong>${fq}</strong> garrafinha(s) • <strong>${brl(fr)}</strong> faturados • <strong>${brl(fp)}</strong> de lucro estimado`;
+ const todaySales=data.sales.filter(x=>x.date===t).slice().reverse();const saleHTML=todaySales.map(x=>{const names=(x.items||[]).map(i=>`${i.qty}x ${esc(i.name)}`).join(" • ");return `<div class="item"><div><strong>${esc(x.customerName||"")}</strong><small>${names}<br>${dateBR(x.date)} • ${x.payment?esc(x.payment):""}${x.delivery==="Entrega"?" • Entrega + R$ 5,00":""}</small></div><div style="text-align:right"><span class="badge green">${brl(x.total)}</span><div class="actions" style="margin-top:6px;justify-content:flex-end"><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editSale(${x.id})">✏️ Editar</button>${x.customerPhone?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="sendSaleWhatsApp(${x.id})">📲 WhatsApp</button>`:""}</div></div></div>`}).join("");salesList.innerHTML=saleHTML||`<div class="empty">Nenhuma venda registrada hoje. 💜</div>`;const filteredSaleHTML=fs.slice().reverse().slice(0,100).map(x=>{const names=(x.items||[]).map(i=>`${i.qty}x ${esc(i.name)}`).join(" • ");return `<div class="item"><div><strong>${esc(x.customerName||"")}</strong><small>${names}<br>${dateBR(x.date)} • ${x.payment?esc(x.payment):""}${x.delivery==="Entrega"?" • Entrega + R$ 5,00":""}</small></div><div style="text-align:right"><span class="badge green">${brl(x.total)}</span><div class="actions" style="margin-top:6px;justify-content:flex-end"><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editSale(${x.id})">✏️ Editar</button>${x.customerPhone?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="sendSaleWhatsApp(${x.id})">📲 WhatsApp</button>`:""}</div></div></div>`}).join("");allSalesList.innerHTML=filteredSaleHTML||`<div class="empty">Nenhuma venda nesse período.</div>`;
  productionTotal.textContent=totalProduced();productionToday.textContent=prod;productionList.innerHTML=data.production.slice().reverse().slice(0,30).map(x=>`<div class="item"><div><strong>${x.qty} garrafinha(s)</strong><small>${dateBR(x.date)}${x.note?" • "+esc(x.note):""}</small></div><span class="badge purple">+${x.qty}</span></div>`).join("")||`<div class="empty">Nenhuma produção registrada.</div>`;
  const cin=data.cash.filter(x=>x.type==="Entrada").reduce((a,x)=>a+x.value,0),cout=data.cash.filter(x=>x.type==="Saída").reduce((a,x)=>a+x.value,0);cashIn.textContent=brl(cin);cashOut.textContent=brl(cout);cashBalance.textContent=brl(cin-cout);cashList.innerHTML=data.cash.slice().reverse().slice(0,50).map(x=>`<div class="item"><div><strong>${esc(x.description||"Movimentação")}</strong><small>${dateBR(x.date)} • ${x.type}</small></div><span class="badge ${x.type==="Entrada"?"green":"red"}">${x.type==="Entrada"?"+":"-"} ${brl(x.value)}</span></div>`).join("")||`<div class="empty">Nenhuma movimentação registrada.</div>`;
  settingPrice.value=data.settings.price;settingCost.value=data.settings.cost;const editBtn=document.getElementById("cancelEditBtn");if(editBtn)editBtn.style.display=editingSaleId?"block":"none";settingGoal.value=data.settings.goal;settingInitialStock.value=data.settings.initialStock;settingLowStock.value=data.settings.lowStock;settingWorkingCapitalGoal.value=data.settings.workingCapitalGoal;settingsWorkingCapital.textContent=brl(wc);settingsWorkingCapitalGoalView.textContent=brl(wcGoal);
