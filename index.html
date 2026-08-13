@@ -107,7 +107,9 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 
 <section id="cash">
 <h2>💵 Caixa</h2>
-<div class="notice">💜 O valor dos produtos entra automaticamente no Caixa. A taxa de entrega de R$ 5,00 é enviada ao cliente, mas não entra no Caixa porque é destinada ao entregador.</div>
+<div class="notice">💜 As vendas com entrega entram no faturamento e no Caixa com o valor total, incluindo os R$ 5,00 da entrega. A taxa de entrega não é descontada automaticamente do lucro.</div>
+<div style="height:12px"></div>
+<div class="card"><div class="total"><div><div class="label">📅 Caixa de hoje</div><h3 id="cashDayStatus">Caixa fechado</h3><div class="mini" id="cashDayInfo">Abra o caixa para registrar o saldo inicial.</div></div><span id="cashDayIcon">🔒</span></div><div class="actions"><button id="openCashBtn" class="primary" type="button" onclick="openCash()">🔓 Abrir caixa</button><button id="closeCashBtn" class="secondary" type="button" onclick="closeCash()" style="display:none">🔒 Fechar caixa</button></div></div>
 <div style="height:12px"></div>
 <div class="card"><form onsubmit="addCash(event)"><div class="row"><div class="field"><label>Tipo</label><select id="cashType"><option value="Entrada">Entrada</option><option value="Saída">Saída</option></select></div><div class="field"><label>Valor</label><input id="cashValue" type="number" min="0" step=".01" required></div></div><div class="field"><label>Descrição</label><input id="cashDescription" type="text" placeholder="Ex.: compra de ingredientes"></div><button class="primary" type="submit">💰 Registrar movimento</button></form></div>
 <div style="height:14px"></div><div class="grid"><div class="card"><div class="label">Entradas</div><div class="value green" id="cashIn">R$ 0,00</div></div><div class="card"><div class="label">Saídas</div><div class="value red" id="cashOut">R$ 0,00</div></div><div class="card"><div class="label">Lucro separado</div><div class="value green" id="cashProfit">R$ 0,00</div></div><div class="card full"><div class="label">Saldo do caixa</div><div class="value purple" id="cashBalance">R$ 0,00</div></div></div>
@@ -149,11 +151,12 @@ const defaultProducts=[
  {id:"avelã",name:"Creme de avelã",price:15,cost:12.48,category:"Açaí",active:true},
  {id:"morango",name:"Creme de morango",price:15,cost:10.98,category:"Açaí",active:true}
 ];
-const defaults={sales:[],cash:[],production:[],products:defaultProducts,clients:[],settings:{price:15,cost:10,goal:300,initialStock:0,lowStock:5,workingCapitalGoal:500}};
+const defaults={sales:[],cash:[],cashDays:{},production:[],products:defaultProducts,clients:[],settings:{price:15,cost:10,goal:300,initialStock:0,lowStock:5,workingCapitalGoal:500}};
 function normalizeData(base){
   const out={...defaults,...base,settings:{...defaults.settings,...(base.settings||{})}};
   out.products=Array.isArray(base.products)&&base.products.length?base.products:structuredClone(defaultProducts);
   out.clients=Array.isArray(base.clients)?base.clients:[];
+  out.cashDays=base.cashDays&&typeof base.cashDays==="object"?base.cashDays:{};
   out.sales=(base.sales||[]).map(s=>{
     const items=Array.isArray(s.items)&&s.items.length?s.items:[{productId:s.productId||String(s.flavor||"").toLowerCase(),name:s.flavor||"Produto",qty:Number(s.qty||1),price:Number(s.price||0),cost:Number(s.cost||out.settings.cost||10),total:Number(s.total||0)}];
     const subtotal=s.subtotal!=null?Number(s.subtotal):items.reduce((a,i)=>a+Number(i.total||0),0);
@@ -210,9 +213,13 @@ function addSale(e){
  const existingClient=data.clients.find(c=>normalizeWhatsApp(c.phone)===whatsapp);
  if(existingClient){existingClient.name=customerName;existingClient.phone=customerPhone;existingClient.address=address||existingClient.address||"";if(note)existingClient.note=note;}
  else data.clients.push({id:"c"+Date.now(),name:customerName,phone:customerPhone,address,note});
- const cashEntry=data.cash.find(x=>x.saleId===sale.id);
- if(cashEntry){cashEntry.date=date;cashEntry.value=subtotal;cashEntry.description=`Venda • ${customerName} • ${items.map(i=>i.name).join(", ")} • ${payment}`;}
- else data.cash.push({id:Date.now()+1,date,type:"Entrada",value:subtotal,description:`Venda • ${customerName} • ${items.map(i=>i.name).join(", ")} • ${payment}`,saleId:sale.id});
+ const saleDescription=`Venda • ${customerName} • ${items.map(i=>i.name).join(", ")} • ${payment}`;
+ const cashEntry=data.cash.find(x=>x.saleId===sale.id&&x.kind!=="delivery");
+ if(cashEntry){cashEntry.date=date;cashEntry.value=total;cashEntry.description=saleDescription;cashEntry.kind="sale";}
+ else data.cash.push({id:Date.now()+1,date,type:"Entrada",value:total,description:saleDescription,saleId:sale.id,kind:"sale"});
+ // A taxa de entrega faz parte do faturamento e do caixa.
+ // Como o entregador é da família, não lançamos uma saída automática para a entrega.
+ data.cash=data.cash.filter(x=>!(x.saleId===sale.id&&x.kind==="delivery"));
  save();
  editingSaleId=null;
  e.target.reset();document.getElementById("orderItems").innerHTML="";addOrderItem();saleDate.value=today();
@@ -287,23 +294,51 @@ function removeProduct(id){if(!confirm("Remover este produto do cadastro? As ven
 function clearSales(){if(!confirm("Apagar todas as vendas e as entradas automáticas de venda do Caixa?"))return;const ids=new Set(data.sales.map(x=>x.id));data.sales=[];data.cash=data.cash.filter(x=>!ids.has(x.saleId));save();render()}
 function periodStart(){const p=reportPeriod?.value||"today";if(p==="all")return null;const d=new Date();d.setDate(d.getDate()-(Number(p)-1));return d.toISOString().slice(0,10)}
 function filteredSales(){const start=periodStart();return start?data.sales.filter(x=>x.date>=start):data.sales}
-function exportBackup(){const blob=new Blob([JSON.stringify({version:5,exportedAt:new Date().toISOString(),data},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="roxo-mania-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function exportBackup(){const blob=new Blob([JSON.stringify({version:6,exportedAt:new Date().toISOString(),data},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="roxo-mania-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 function importBackup(e){const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const obj=JSON.parse(r.result);if(!obj.data||!Array.isArray(obj.data.sales)||!Array.isArray(obj.data.production)||!Array.isArray(obj.data.cash))throw Error();data=normalizeData(obj.data);save();render();alert("Backup importado com sucesso! 💜")}catch(err){alert("Não foi possível importar esse backup.")}e.target.value=""};r.readAsText(f)}
 function monthKey(d){return String(d||"").slice(0,7)}
 function salesProfit(list){return list.reduce((a,s)=>a+Number(s.subtotal??s.total??0)-Number(s.costTotal||s.items?.reduce((z,i)=>z+i.cost*i.qty,0)||0),0)}
-function businessRevenue(list){return list.reduce((a,s)=>a+Number(s.subtotal??s.total??0),0)}
+function businessRevenue(list){return list.reduce((a,s)=>a+Number(s.total??s.subtotal??0),0)}
 function repairSaleCashEntries(){
   let changed=false;
   for(const s of data.sales){
-    const entry=data.cash.find(x=>x.saleId===s.id);
-    if(entry){
-      const expected=Number(s.subtotal??(Number(s.total||0)-Number(s.deliveryFee||0)));
-      if(Math.abs(Number(entry.value||0)-expected)>0.001){entry.value=expected;changed=true;}
-      if(entry.date!==s.date){entry.date=s.date;changed=true;}
-    }
+    const expected=Number(s.subtotal??(Number(s.total||0)-Number(s.deliveryFee||0)));
+    const total=Number(s.total??(expected+Number(s.deliveryFee||0)));
+    let entry=data.cash.find(x=>x.saleId===s.id&&x.kind!=="delivery");
+    if(entry){if(Math.abs(Number(entry.value||0)-total)>0.001){entry.value=total;changed=true;}if(entry.date!==s.date){entry.date=s.date;changed=true;}if(entry.kind!=="sale"){entry.kind="sale";changed=true;}}
+    else{data.cash.push({id:Date.now()+Math.random(),date:s.date,type:"Entrada",value:total,description:`Venda • ${s.customerName||"Cliente"}`,saleId:s.id,kind:"sale"});changed=true;}
+    // Taxa de entrega pertence ao faturamento/caixa e não gera saída automática.
+    const oldDelivery=data.cash.filter(x=>x.saleId===s.id&&x.kind==="delivery");
+    if(oldDelivery.length){data.cash=data.cash.filter(x=>!(x.saleId===s.id&&x.kind==="delivery"));changed=true;}
+    else if(de){data.cash=data.cash.filter(x=>x!==de);changed=true;}
   }
   if(changed)save();
 }
+function getCashDay(date=today()){return data.cashDays[date]||null}
+function cashDayTotals(date=today()){const list=data.cash.filter(x=>x.date===date);return {in:list.filter(x=>x.type==="Entrada").reduce((a,x)=>a+Number(x.value||0),0),out:list.filter(x=>x.type==="Saída").reduce((a,x)=>a+Number(x.value||0),0)}}
+function openCash(){
+  const d=today(),existing=getCashDay(d);
+  if(existing?.opened){alert("O caixa de hoje já está aberto. 💜");return}
+  const raw=prompt("Com quanto você está abrindo o caixa hoje?", "0,00");
+  if(raw===null)return;
+  const opening=Number(String(raw).replace(/\./g,"").replace(",","."));
+  if(!Number.isFinite(opening)||opening<0){alert("Informe um valor válido.");return}
+  data.cashDays[d]={opened:true,opening,openedAt:new Date().toISOString(),closed:false};save();render();alert(`Caixa aberto com ${brl(opening)}. 💜`);
+}
+function closeCash(){
+  const d=today(),day=getCashDay(d);
+  if(!day?.opened){alert("Abra o caixa antes de fechá-lo. 💜");return}
+  if(day.closed){alert("O caixa de hoje já está fechado.");return}
+  const totals=cashDayTotals(d),daySales=data.sales.filter(x=>x.date===d),profitToSeparate=salesProfit(daySales),expected=Number(day.opening||0)+totals.in-totals.out-profitToSeparate;
+  const raw=prompt(`Saldo esperado no fechamento (já descontando o lucro do dia): ${brl(expected)}\n\nConte o dinheiro que ficou no caixa e informe quanto encontrou:`,brl(expected).replace("R$ ","").replace(".","").replace(",","."));
+  if(raw===null)return;
+  const counted=Number(String(raw).replace(/\./g,"").replace(",","."));
+  if(!Number.isFinite(counted)||counted<0){alert("Informe um valor válido.");return}
+  const diff=counted-expected;
+  day.closed=true;day.closedAt=new Date().toISOString();day.expected=expected;day.counted=counted;day.difference=diff;save();render();
+  alert(`Caixa fechado!\n\nEsperado: ${brl(expected)}\nContado: ${brl(counted)}\nDiferença: ${brl(diff)}`);
+}
+
 function currentCashBalance(){const cin=data.cash.filter(x=>x.type==="Entrada").reduce((a,x)=>a+x.value,0),cout=data.cash.filter(x=>x.type==="Saída").reduce((a,x)=>a+x.value,0);return cin-cout}
 function workingCapital(){const avgCost=data.products.length?data.products.reduce((a,p)=>a+Number(p.cost||0),0)/data.products.length:Number(data.settings.cost||10);return Math.max(0,currentCashBalance())+Math.max(0,stock())*avgCost}
 function render(){
@@ -318,7 +353,11 @@ function render(){
   todaySalesList.innerHTML=todayHTML||`<div class="empty">Nenhuma venda hoje. 💜</div>`;
   allSalesList.innerHTML=saleHTML||`<div class="empty">Nenhum pedido registrado ainda.</div>`;
  productionTotal.textContent=totalProduced();productionToday.textContent=prod;productionList.innerHTML=data.production.slice().reverse().slice(0,30).map(x=>`<div class="item"><div><strong>${x.qty} garrafinha(s)</strong><small>${dateBR(x.date)}${x.note?" • "+esc(x.note):""}</small></div><span class="badge purple">+${x.qty}</span></div>`).join("")||`<div class="empty">Nenhuma produção registrada.</div>`;
- const cin=data.cash.filter(x=>x.type==="Entrada").reduce((a,x)=>a+x.value,0),cout=data.cash.filter(x=>x.type==="Saída").reduce((a,x)=>a+x.value,0),profitAll=salesProfit(data.sales),cashAfterProfit=cin-cout-profitAll;cashIn.textContent=brl(cin);cashOut.textContent=brl(cout);cashProfit.textContent=brl(profitAll);cashBalance.textContent=brl(cashAfterProfit);cashList.innerHTML=data.cash.slice().reverse().slice(0,50).map(x=>`<div class="item"><div><strong>${esc(x.description||"Movimentação")}</strong><small>${dateBR(x.date)} • ${x.type}</small></div><span class="badge ${x.type==="Entrada"?"green":"red"}">${x.type==="Entrada"?"+":"-"} ${brl(x.value)}</span></div>`).join("")||`<div class="empty">Nenhuma movimentação registrada.</div>`;
+ const cin=data.cash.filter(x=>x.type==="Entrada").reduce((a,x)=>a+x.value,0),cout=data.cash.filter(x=>x.type==="Saída").reduce((a,x)=>a+x.value,0),profitAll=salesProfit(data.sales),cashAfterProfit=cin-cout-profitAll;cashIn.textContent=brl(cin);cashOut.textContent=brl(cout);cashProfit.textContent=brl(profitAll);cashBalance.textContent=brl(cashAfterProfit);
+ const cashDay=getCashDay(t),cashTotals=cashDayTotals(t);
+ if(cashDay?.opened){cashDayStatus.textContent=cashDay.closed?"Caixa fechado":"Caixa aberto";cashDayIcon.textContent=cashDay.closed?"🔒":"🔓";if(cashDay.closed){cashDayInfo.textContent=`Abertura: ${brl(cashDay.opening)} • Esperado: ${brl(cashDay.expected)} • Contado: ${brl(cashDay.counted)} • Diferença: ${brl(cashDay.difference)}`;}else{cashDayInfo.textContent=`Abertura: ${brl(cashDay.opening)} • Movimentos: +${brl(cashTotals.in)} / -${brl(cashTotals.out)}`;}}else{cashDayStatus.textContent="Caixa fechado";cashDayIcon.textContent="🔒";cashDayInfo.textContent="Abra o caixa para registrar o saldo inicial.";}
+ openCashBtn.style.display=cashDay?.opened&&!cashDay.closed?"none":"block";closeCashBtn.style.display=cashDay?.opened&&!cashDay.closed?"block":"none";
+ cashList.innerHTML=data.cash.slice().reverse().slice(0,50).map(x=>`<div class="item"><div><strong>${esc(x.description||"Movimentação")}</strong><small>${dateBR(x.date)} • ${x.type}</small></div><span class="badge ${x.type==="Entrada"?"green":"red"}">${x.type==="Entrada"?"+":"-"} ${brl(x.value)}</span></div>`).join("")||`<div class="empty">Nenhuma movimentação registrada.</div>`;
  settingPrice.value=data.settings.price;settingCost.value=data.settings.cost;const editBtn=document.getElementById("cancelEditBtn");if(editBtn)editBtn.style.display=editingSaleId?"block":"none";settingGoal.value=data.settings.goal;settingInitialStock.value=data.settings.initialStock;settingLowStock.value=data.settings.lowStock;settingWorkingCapitalGoal.value=data.settings.workingCapitalGoal;settingsWorkingCapital.textContent=brl(wc);settingsWorkingCapitalGoalView.textContent=brl(wcGoal);
  productsList.innerHTML=data.products.map(p=>`<div class="item product-card"><div><strong>${esc(p.name)}</strong><div class="product-meta">${esc(p.category||"Açaí")} • Venda ${brl(p.price)} • Custo ${brl(p.cost)}</div></div><div class="actions"><span class="badge ${p.active===false?"red":"green"}">${p.active===false?"inativo":"ativo"}</span><button class="secondary" style="padding:7px 9px;font-size:11px" onclick="editProduct('${esc(p.id)}')">✏️ Editar</button><button class="secondary" style="padding:7px 9px;font-size:11px" onclick="toggleProduct('${esc(p.id)}')">${p.active===false?"Ativar":"Desativar"}</button><button class="danger" style="padding:7px 9px;font-size:11px" onclick="removeProduct('${esc(p.id)}')">Excluir</button></div></div>`).join("")||`<div class="empty">Nenhum produto cadastrado.</div>`;
  const dl=document.getElementById("clientSuggestions");if(dl)dl.innerHTML=data.clients.map(c=>`<option value="${esc(c.name)}">${esc(c.phone)}</option>`).join("");
