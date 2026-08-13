@@ -179,7 +179,7 @@ form{
   font-weight:700;
 }
 
-input,select{
+input,select,textarea{
   width:100%;
   border:1px solid var(--borda);
   border-radius:13px;
@@ -190,7 +190,7 @@ input,select{
   outline:none;
 }
 
-input:focus,select:focus{
+input:focus,select:focus,textarea:focus{
   border-color:var(--roxo);
   box-shadow:0 0 0 3px rgba(106,27,154,.08);
 }
@@ -421,6 +421,18 @@ nav button.active{
         <input id="saleDate" type="date" required>
       </div>
 
+      <div class="row">
+        <div class="field">
+          <label>Nome do cliente</label>
+          <input id="customerName" type="text" placeholder="Ex.: Maria" required>
+        </div>
+
+        <div class="field">
+          <label>WhatsApp do cliente</label>
+          <input id="customerPhone" type="tel" inputmode="tel" placeholder="(99) 99999-9999" required>
+        </div>
+      </div>
+
       <div class="field">
         <label>Sabor</label>
         <select id="saleFlavor" required>
@@ -448,8 +460,39 @@ nav button.active{
 
       </div>
 
+      <div class="row">
+        <div class="field">
+          <label>Forma de pagamento</label>
+          <select id="paymentMethod" required>
+            <option value="">Selecione</option>
+            <option>Pix</option>
+            <option>Dinheiro</option>
+            <option>Cartão</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Entrega / retirada</label>
+          <select id="deliveryMethod" required>
+            <option value="">Selecione</option>
+            <option>Retirada</option>
+            <option>Entrega</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Endereço / ponto de retirada</label>
+        <input id="customerAddress" type="text" placeholder="Opcional">
+      </div>
+
+      <div class="field">
+        <label>Observação do pedido</label>
+        <input id="saleNote" type="text" placeholder="Ex.: sem leite condensado">
+      </div>
+
       <button class="primary" type="submit">
-        💜 Salvar venda
+        💜 Salvar venda e enviar no WhatsApp
       </button>
 
     </form>
@@ -739,6 +782,42 @@ function showTab(id){
 }
 
 
+function normalizeWhatsApp(phone){
+  let digits=String(phone||"").replace(/\D/g,"");
+
+  if(digits.startsWith("00")) digits=digits.slice(2);
+  if(digits.startsWith("55")) return digits;
+
+  if(digits.length===10 || digits.length===11){
+    return "55"+digits;
+  }
+
+  return "";
+}
+
+function whatsappMessage(sale){
+  const lines=[
+    "💜 *Roxo Mania*",
+    "",
+    `Olá, ${sale.customerName}! Seu pedido foi registrado com sucesso. 🥤`,
+    "",
+    "🧾 *Detalhes do pedido:*",
+    `• Sabor: ${sale.flavor}`,
+    `• Quantidade: ${sale.qty} garrafinha(s)`,
+    `• Valor unitário: ${brl(sale.price)}`,
+    `• *Total: ${brl(sale.total)}*`,
+    `• Pagamento: ${sale.payment}`,
+    `• ${sale.delivery}${sale.address ? ": "+sale.address : ""}`,
+    sale.note ? `• Observação: ${sale.note}` : "",
+    "",
+    `📅 Data: ${dateBR(sale.date)}`,
+    "",
+    "Muito mais que açaí. Uma experiência. 💜"
+  ];
+
+  return lines.filter(Boolean).join("\n");
+}
+
 function addSale(e){
 
   e.preventDefault();
@@ -748,16 +827,41 @@ function addSale(e){
   const flavor=document.getElementById("saleFlavor").value;
   const date=document.getElementById("saleDate").value;
 
-  if(!qty || !flavor || !date)return;
+  const customerName=document.getElementById("customerName").value.trim();
+  const customerPhone=document.getElementById("customerPhone").value.trim();
+  const payment=document.getElementById("paymentMethod").value;
+  const delivery=document.getElementById("deliveryMethod").value;
+  const address=document.getElementById("customerAddress").value.trim();
+  const note=document.getElementById("saleNote").value.trim();
 
-  data.sales.push({
+  const whatsapp=normalizeWhatsApp(customerPhone);
+
+  if(!qty || !flavor || !date || !customerName || !payment || !delivery){
+    alert("Preencha todos os campos obrigatórios. 💜");
+    return;
+  }
+
+  if(!whatsapp){
+    alert("Digite um número de WhatsApp válido com DDD. Ex.: (99) 99999-9999");
+    return;
+  }
+
+  const sale={
     id:Date.now(),
     date,
     flavor,
     qty,
     price,
-    total:qty*price
-  });
+    total:qty*price,
+    customerName,
+    customerPhone,
+    payment,
+    delivery,
+    address,
+    note
+  };
+
+  data.sales.push(sale);
 
   save();
 
@@ -768,8 +872,32 @@ function addSale(e){
 
   render();
 
-  alert("Venda salva com sucesso! 💜");
+  const message=whatsappMessage(sale);
+  const url=`https://wa.me/${whatsapp}?text=${encodeURIComponent(message)}`;
+
+  window.location.href=url;
 }
+
+function sendSaleWhatsApp(id){
+  const sale=data.sales.find(x=>x.id===id);
+
+  if(!sale || !sale.customerPhone){
+    alert("Esta venda não possui um WhatsApp cadastrado.");
+    return;
+  }
+
+  const whatsapp=normalizeWhatsApp(sale.customerPhone);
+
+  if(!whatsapp){
+    alert("O WhatsApp cadastrado nesta venda não é válido.");
+    return;
+  }
+
+  const message=whatsappMessage(sale);
+  window.location.href=
+    `https://wa.me/${whatsapp}?text=${encodeURIComponent(message)}`;
+}
+
 
 
 function addCash(e){
@@ -944,10 +1072,13 @@ function render(){
     .map(x=>`
       <div class="item">
         <div>
-          <strong>${x.flavor}</strong>
-          <small>${dateBR(x.date)} • ${x.qty} unidade(s)</small>
+          <strong>${x.customerName ? x.customerName+" • "+x.flavor : x.flavor}</strong>
+          <small>${dateBR(x.date)} • ${x.qty} unidade(s)${x.payment ? " • "+x.payment : ""}</small>
         </div>
-        <span class="badge green">${brl(x.total)}</span>
+        <div style="text-align:right">
+          <span class="badge green">${brl(x.total)}</span>
+          ${x.customerPhone ? `<button class="secondary" style="display:block;margin-top:6px;padding:6px 8px;font-size:11px" onclick="sendSaleWhatsApp(${x.id})">📲 WhatsApp</button>` : ""}
+        </div>
       </div>
     `).join("");
 
