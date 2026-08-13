@@ -2,1155 +2,171 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#6A1B9A">
 <title>Roxo Mania</title>
-
 <style>
-:root{
-  --roxo:#6A1B9A;
-  --roxo2:#45206B;
-  --roxo3:#8E44AD;
-  --lilas:#F3E8FF;
-  --bg:#F8F7FB;
-  --card:#FFFFFF;
-  --texto:#27232D;
-  --muted:#77717F;
-  --verde:#22A06B;
-  --vermelho:#D64545;
-  --borda:#E8E2EE;
-  --sombra:0 8px 25px rgba(69,32,107,.08);
-}
-
-*{
-  box-sizing:border-box;
-  -webkit-tap-highlight-color:transparent;
-}
-
-body{
-  margin:0;
-  background:var(--bg);
-  color:var(--texto);
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
-}
-
-header{
-  background:linear-gradient(135deg,#6A1B9A,#45206B);
-  color:white;
-  padding:24px 18px 30px;
-  border-radius:0 0 28px 28px;
-  box-shadow:0 8px 25px rgba(69,32,107,.20);
-}
-
-.brand{
-  font-size:25px;
-  font-weight:800;
-  letter-spacing:-.5px;
-}
-
-.subtitle{
-  margin-top:6px;
-  opacity:.88;
-  font-size:14px;
-}
-
-main{
-  max-width:760px;
-  margin:auto;
-  padding:18px 16px 110px;
-}
-
-section{
-  display:none;
-}
-
-section.show{
-  display:block;
-  animation:entrada .25s ease;
-}
-
-@keyframes entrada{
-  from{opacity:0;transform:translateY(6px)}
-  to{opacity:1;transform:none}
-}
-
-h1{
-  font-size:25px;
-  margin:4px 0 5px;
-}
-
-h2{
-  font-size:20px;
-  margin:4px 0 14px;
-}
-
-h3{
-  margin:0;
-}
-
-.hello{
-  margin-bottom:18px;
-}
-
-.hello small{
-  color:var(--muted);
-}
-
-.grid{
-  display:grid;
-  grid-template-columns:repeat(2,1fr);
-  gap:12px;
-}
-
-.card{
-  background:var(--card);
-  border:1px solid var(--borda);
-  border-radius:18px;
-  padding:16px;
-  box-shadow:var(--sombra);
-}
-
-.card.full{
-  grid-column:1/-1;
-}
-
-.label{
-  color:var(--muted);
-  font-size:13px;
-  margin-bottom:7px;
-}
-
-.value{
-  font-size:23px;
-  font-weight:800;
-}
-
-.green{
-  color:var(--verde);
-}
-
-.purple{
-  color:var(--roxo);
-}
-
-.red{
-  color:var(--vermelho);
-}
-
-.progress{
-  height:10px;
-  background:#eee8F3;
-  border-radius:20px;
-  overflow:hidden;
-  margin-top:12px;
-}
-
-.progress div{
-  height:100%;
-  width:0;
-  background:linear-gradient(90deg,#6A1B9A,#A855D9);
-  border-radius:20px;
-}
-
-.notice{
-  background:var(--lilas);
-  border:1px solid #E6D1FA;
-  color:var(--roxo2);
-  padding:13px;
-  border-radius:15px;
-  font-size:13px;
-  margin-top:14px;
-}
-
-form{
-  display:flex;
-  flex-direction:column;
-  gap:12px;
-}
-
-.field{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-
-.field label{
-  font-size:13px;
-  font-weight:700;
-}
-
-input,select,textarea{
-  width:100%;
-  border:1px solid var(--borda);
-  border-radius:13px;
-  padding:13px;
-  background:white;
-  color:var(--texto);
-  font-size:16px;
-  outline:none;
-}
-
-input:focus,select:focus,textarea:focus{
-  border-color:var(--roxo);
-  box-shadow:0 0 0 3px rgba(106,27,154,.08);
-}
-
-.row{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:10px;
-}
-
-button{
-  border:0;
-  border-radius:14px;
-  padding:13px 16px;
-  font-size:15px;
-  font-weight:750;
-  cursor:pointer;
-}
-
-.primary{
-  background:var(--roxo);
-  color:white;
-  box-shadow:0 6px 15px rgba(106,27,154,.20);
-}
-
-.secondary{
-  background:var(--lilas);
-  color:var(--roxo2);
-}
-
-.danger{
-  background:#FDECEC;
-  color:var(--vermelho);
-}
-
-.list{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-
-.item{
-  background:white;
-  border:1px solid var(--borda);
-  border-radius:15px;
-  padding:13px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:10px;
-}
-
-.item strong{
-  display:block;
-}
-
-.item small{
-  color:var(--muted);
-}
-
-.badge{
-  padding:6px 9px;
-  border-radius:10px;
-  font-size:12px;
-  font-weight:700;
-  white-space:nowrap;
-}
-
-.badge.green{
-  background:#E9F8F1;
-}
-
-.badge.red{
-  background:#FDECEC;
-}
-
-.empty{
-  text-align:center;
-  color:var(--muted);
-  padding:25px 10px;
-}
-
-nav{
-  position:fixed;
-  z-index:20;
-  bottom:0;
-  left:0;
-  right:0;
-  background:rgba(255,255,255,.96);
-  backdrop-filter:blur(15px);
-  border-top:1px solid var(--borda);
-  padding:8px 6px calc(8px + env(safe-area-inset-bottom));
-  display:grid;
-  grid-template-columns:repeat(5,1fr);
-  gap:4px;
-}
-
-nav button{
-  background:transparent;
-  color:#817986;
-  padding:8px 3px;
-  font-size:11px;
-  border-radius:12px;
-}
-
-nav button.active{
-  background:var(--lilas);
-  color:var(--roxo);
-}
-
-.nav-icon{
-  display:block;
-  font-size:19px;
-  margin-bottom:2px;
-}
-
-.total{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:12px;
-}
-
-.total strong{
-  color:var(--roxo);
-  font-size:21px;
-}
-
-.top-actions{
-  display:flex;
-  gap:8px;
-  margin-top:14px;
-}
-
-.top-actions button{
-  flex:1;
-}
-
-@media(max-width:420px){
-  .grid{
-    grid-template-columns:1fr 1fr;
-  }
-
-  .row{
-    grid-template-columns:1fr;
-  }
-
-  .value{
-    font-size:20px;
-  }
-}
+:root{--roxo:#6A1B9A;--roxo2:#45206B;--roxo3:#8E44AD;--lilas:#F3E8FF;--bg:#F8F7FB;--card:#fff;--texto:#27232D;--muted:#77717F;--verde:#22A06B;--vermelho:#D64545;--borda:#E8E2EE;--amarelo:#B7791F;--sombra:0 8px 25px rgba(69,32,107,.08)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--texto);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+header{background:linear-gradient(135deg,#6A1B9A,#45206B);color:#fff;padding:24px 18px 30px;border-radius:0 0 28px 28px;box-shadow:0 8px 25px rgba(69,32,107,.2)}
+.brand{font-size:25px;font-weight:800;letter-spacing:-.5px}.subtitle{margin-top:6px;opacity:.88;font-size:14px}
+main{max-width:760px;margin:auto;padding:18px 16px 115px}section{display:none}section.show{display:block;animation:entrada .25s ease}@keyframes entrada{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+h1{font-size:25px;margin:4px 0 5px}h2{font-size:20px;margin:4px 0 14px}h3{margin:0}.hello{margin-bottom:18px}.hello small{color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.card{background:var(--card);border:1px solid var(--borda);border-radius:18px;padding:16px;box-shadow:var(--sombra)}.card.full{grid-column:1/-1}
+.label{color:var(--muted);font-size:13px;margin-bottom:7px}.value{font-size:23px;font-weight:800}.green{color:var(--verde)}.purple{color:var(--roxo)}.red{color:var(--vermelho)}.warning{color:var(--amarelo)}
+.progress{height:10px;background:#eee8f3;border-radius:20px;overflow:hidden;margin-top:12px}.progress div{height:100%;width:0;background:linear-gradient(90deg,#6A1B9A,#A855D9);border-radius:20px}
+.notice{background:var(--lilas);border:1px solid #E6D1FA;color:var(--roxo2);padding:13px;border-radius:15px;font-size:13px;margin-top:14px}
+form{display:flex;flex-direction:column;gap:12px}.field{display:flex;flex-direction:column;gap:6px}.field label{font-size:13px;font-weight:700}
+input,select{width:100%;border:1px solid var(--borda);border-radius:13px;padding:13px;background:#fff;color:var(--texto);font-size:16px;outline:none}input:focus,select:focus{border-color:var(--roxo);box-shadow:0 0 0 3px rgba(106,27,154,.08)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}button{border:0;border-radius:14px;padding:13px 16px;font-size:15px;font-weight:750;cursor:pointer}.primary{background:var(--roxo);color:#fff;box-shadow:0 6px 15px rgba(106,27,154,.2)}.secondary{background:var(--lilas);color:var(--roxo2)}.danger{background:#FDECEC;color:var(--vermelho)}.ghost{background:#fff;color:var(--roxo);border:1px solid var(--borda)}
+.list{display:flex;flex-direction:column;gap:10px}.item{background:#fff;border:1px solid var(--borda);border-radius:15px;padding:13px;display:flex;justify-content:space-between;align-items:center;gap:10px}.item strong{display:block}.item small{color:var(--muted)}
+.badge{padding:6px 9px;border-radius:10px;font-size:12px;font-weight:700;white-space:nowrap}.badge.green{background:#E9F8F1}.badge.red{background:#FDECEC}.badge.purple{background:var(--lilas)}.empty{text-align:center;color:var(--muted);padding:25px 10px}
+nav{position:fixed;z-index:20;bottom:0;left:0;right:0;background:rgba(255,255,255,.96);backdrop-filter:blur(15px);border-top:1px solid var(--borda);padding:8px 6px calc(8px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(5,1fr);gap:4px}nav button{background:transparent;color:#817986;padding:8px 3px;font-size:11px;border-radius:12px}nav button.active{background:var(--lilas);color:var(--roxo)}.nav-icon{display:block;font-size:19px;margin-bottom:2px}
+.total{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.total strong{color:var(--roxo);font-size:21px}.top-actions{display:flex;gap:8px;margin-top:14px}.top-actions button{flex:1}.actions{display:flex;gap:8px;flex-wrap:wrap}.actions button{flex:1;min-width:130px}
+.mini{font-size:12px;color:var(--muted)}.stock-ok{background:#E9F8F1;color:#18794E}.stock-low{background:#FFF4D6;color:#8A5A00}.stock-out{background:#FDECEC;color:#A62E2E}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:9px 6px;border-bottom:1px solid var(--borda)}th{color:var(--muted);font-weight:700}
+@media(max-width:420px){.grid{grid-template-columns:1fr 1fr}.row{grid-template-columns:1fr}.value{font-size:20px}}
 </style>
 </head>
-
 <body>
-
-<header>
-  <div class="brand">💜 Roxo Mania</div>
-  <div class="subtitle">Muito mais que açaí. Uma experiência.</div>
-</header>
-
+<header><div class="brand">💜 Roxo Mania</div><div class="subtitle">Muito mais que açaí. Uma experiência.</div></header>
 <main>
 
-<!-- INÍCIO -->
 <section id="home" class="show">
-
-  <div class="hello">
-    <h1>Resumo de hoje</h1>
-    <small id="todayText"></small>
-  </div>
-
-  <div class="grid">
-
-    <div class="card">
-      <div class="label">💰 Faturamento</div>
-      <div class="value green" id="todayRevenue">R$ 0,00</div>
-    </div>
-
-    <div class="card">
-      <div class="label">🥤 Garrafinhas</div>
-      <div class="value purple" id="todayQty">0</div>
-    </div>
-
-    <div class="card">
-      <div class="label">🎯 Meta do dia</div>
-      <div class="value" id="goalValue">R$ 0,00</div>
-    </div>
-
-    <div class="card">
-      <div class="label">📦 Produção</div>
-      <div class="value purple" id="productionValue">0</div>
-    </div>
-
-    <div class="card full">
-      <div class="total">
-        <div>
-          <div class="label">Progresso da meta</div>
-          <strong id="goalPercent">0%</strong>
-        </div>
-        <span>🚀</span>
-      </div>
-      <div class="progress">
-        <div id="goalBar"></div>
-      </div>
-    </div>
-
-  </div>
-
-  <div class="notice">
-    💜 <strong>Roxo Mania</strong><br>
-    Cremoso • Gelado • Energético
-  </div>
-
+<div class="hello"><h1>Resumo de hoje</h1><small id="todayText"></small></div>
+<div class="grid">
+<div class="card"><div class="label">💰 Faturamento</div><div class="value green" id="todayRevenue">R$ 0,00</div></div>
+<div class="card"><div class="label">🥤 Vendidas</div><div class="value purple" id="todayQty">0</div></div>
+<div class="card"><div class="label">📦 Estoque</div><div class="value purple" id="stockValue">0</div><div id="stockBadge" class="badge purple">disponíveis</div></div>
+<div class="card"><div class="label">🎯 Meta do dia</div><div class="value" id="goalValue">R$ 300,00</div></div>
+<div class="card"><div class="label">📦 Produção hoje</div><div class="value purple" id="productionValue">0</div></div>
+<div class="card"><div class="label">📈 Lucro estimado hoje</div><div class="value green" id="todayProfit">R$ 0,00</div></div>
+<div class="card full"><div class="total"><div><div class="label">Progresso da meta</div><strong id="goalPercent">0%</strong></div><span>🚀</span></div><div class="progress"><div id="goalBar"></div></div></div>
+</div>
+<div class="actions" style="margin-top:14px"><button class="secondary" onclick="showTab('sell')">🧾 Nova venda</button><button class="secondary" onclick="showTab('production')">📦 Registrar produção</button><button class="ghost" onclick="showTab('settings')">⚙️ Configurações</button></div>
+<div id="stockNotice" class="notice">💜 Estoque calculado automaticamente: produção + estoque inicial − vendas.</div>
 </section>
 
-
-<!-- VENDAS -->
 <section id="sell">
-
-  <h2>🧾 Registrar venda</h2>
-
-  <div class="card">
-
-    <form onsubmit="addSale(event)">
-
-      <div class="field">
-        <label>Data</label>
-        <input id="saleDate" type="date" required>
-      </div>
-
-      <div class="row">
-        <div class="field">
-          <label>Nome do cliente</label>
-          <input id="customerName" type="text" placeholder="Ex.: Maria" required>
-        </div>
-
-        <div class="field">
-          <label>WhatsApp do cliente</label>
-          <input id="customerPhone" type="tel" inputmode="tel" placeholder="(99) 99999-9999" required>
-        </div>
-      </div>
-
-      <div class="field">
-        <label>Sabor</label>
-        <select id="saleFlavor" required>
-          <option value="">Selecione</option>
-          <option>Tradicional</option>
-          <option>Creme de leitinho</option>
-          <option>Creme de avelã</option>
-          <option>Creme de morango</option>
-          <option>Creme de maracujá</option>
-          <option>Outro</option>
-        </select>
-      </div>
-
-      <div class="row">
-
-        <div class="field">
-          <label>Quantidade</label>
-          <input id="saleQty" type="number" min="1" value="1" required>
-        </div>
-
-        <div class="field">
-          <label>Valor unitário</label>
-          <input id="salePrice" type="number" min="0" step=".01" value="15" required>
-        </div>
-
-      </div>
-
-      <div class="row">
-        <div class="field">
-          <label>Forma de pagamento</label>
-          <select id="paymentMethod" required>
-            <option value="">Selecione</option>
-            <option>Pix</option>
-            <option>Dinheiro</option>
-            <option>Cartão</option>
-          </select>
-        </div>
-
-        <div class="field">
-          <label>Entrega / retirada</label>
-          <select id="deliveryMethod" required>
-            <option value="">Selecione</option>
-            <option>Retirada</option>
-            <option>Entrega</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="field">
-        <label>Endereço / ponto de retirada</label>
-        <input id="customerAddress" type="text" placeholder="Opcional">
-      </div>
-
-      <div class="field">
-        <label>Observação do pedido</label>
-        <input id="saleNote" type="text" placeholder="Ex.: sem leite condensado">
-      </div>
-
-      <button class="primary" type="submit">
-        💜 Salvar venda e enviar no WhatsApp
-      </button>
-
-    </form>
-
-  </div>
-
-  <div class="notice">
-    Preço padrão: <strong>R$ 15,00</strong>
-  </div>
-
-  <h2 style="margin-top:24px">Últimas vendas</h2>
-
-  <div id="salesList" class="list"></div>
-
+<h2>🧾 Registrar venda</h2>
+<div class="card">
+<form onsubmit="addSale(event)">
+<div class="field"><label>Data</label><input id="saleDate" type="date" required></div>
+<div class="row"><div class="field"><label>Nome do cliente</label><input id="customerName" type="text" placeholder="Ex.: Maria" required></div><div class="field"><label>WhatsApp do cliente</label><input id="customerPhone" type="tel" inputmode="tel" placeholder="(99) 99999-9999" required></div></div>
+<div class="field"><label>Sabor</label><select id="saleFlavor" required><option value="">Selecione</option><option>Tradicional</option><option>Creme de leitinho</option><option>Creme de avelã</option><option>Creme de morango</option><option>Creme de maracujá</option></select></div>
+<div class="row"><div class="field"><label>Quantidade</label><input id="saleQty" type="number" min="1" value="1" required></div><div class="field"><label>Valor unitário</label><input id="salePrice" type="number" min="0" step=".01" value="15" required></div></div>
+<div class="row"><div class="field"><label>Forma de pagamento</label><select id="paymentMethod" required><option value="">Selecione</option><option>Pix</option><option>Dinheiro</option><option>Cartão</option></select></div><div class="field"><label>Entrega / retirada</label><select id="deliveryMethod" required><option value="">Selecione</option><option>Retirada</option><option>Entrega</option></select></div></div>
+<div class="field"><label>Endereço / ponto de retirada</label><input id="customerAddress" type="text" placeholder="Opcional"></div>
+<div class="field"><label>Observação do pedido</label><input id="saleNote" type="text" placeholder="Ex.: sem leite condensado"></div>
+<div id="saleStockInfo" class="notice">Estoque disponível: 0</div>
+<button class="primary" type="submit">💜 Salvar venda e enviar no WhatsApp</button>
+</form>
+</div>
+<div class="notice">Preço padrão: <strong id="defaultPriceNotice">R$ 15,00</strong> • A venda entra automaticamente no Caixa.</div>
+<h2 style="margin-top:24px">Últimas vendas</h2><div id="salesList" class="list"></div>
 </section>
 
-
-<!-- VENDAS RESUMO -->
 <section id="sales">
-
-  <h2>📊 Vendas</h2>
-
-  <div class="grid">
-
-    <div class="card">
-      <div class="label">Total vendido</div>
-      <div class="value green" id="allRevenue">R$ 0,00</div>
-    </div>
-
-    <div class="card">
-      <div class="label">Unidades</div>
-      <div class="value purple" id="allQty">0</div>
-    </div>
-
-  </div>
-
-  <div style="height:14px"></div>
-
-  <div class="card">
-    <div class="total">
-      <div>
-        <div class="label">Histórico</div>
-        <h3>Vendas registradas</h3>
-      </div>
-      <span>🥤</span>
-    </div>
-
-    <div id="allSalesList" class="list"></div>
-  </div>
-
-  <div class="top-actions">
-    <button class="danger" onclick="clearSales()">Apagar vendas</button>
-  </div>
-
+<h2>📊 Vendas</h2>
+<div class="grid"><div class="card"><div class="label">Total vendido</div><div class="value green" id="allRevenue">R$ 0,00</div></div><div class="card"><div class="label">Unidades</div><div class="value purple" id="allQty">0</div></div><div class="card"><div class="label">Ticket médio</div><div class="value purple" id="avgTicket">R$ 0,00</div></div><div class="card"><div class="label">Clientes</div><div class="value purple" id="customerCount">0</div></div></div>
+<div style="height:14px"></div><div class="card"><div class="field"><label>Período do relatório</label><select id="reportPeriod" onchange="render()"><option value="today">Hoje</option><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="all">Todo o período</option></select></div><div style="height:12px"></div><div id="reportSummary" class="notice"></div></div>
+<div style="height:14px"></div><div class="card"><div class="total"><div><div class="label">Histórico</div><h3>Vendas registradas</h3></div><span>🥤</span></div><div id="allSalesList" class="list"></div></div>
+<div class="top-actions"><button class="danger" onclick="clearSales()">Apagar vendas</button></div>
 </section>
 
-
-<!-- PRODUÇÃO -->
 <section id="production">
-
-  <h2>📦 Produção</h2>
-
-  <div class="card">
-
-    <form onsubmit="saveProduction(event)">
-
-      <div class="field">
-        <label>Quantidade produzida</label>
-        <input id="productionQty" type="number" min="0" required>
-      </div>
-
-      <div class="field">
-        <label>Observação</label>
-        <input id="productionNote" type="text" placeholder="Ex.: produção da manhã">
-      </div>
-
-      <button class="primary" type="submit">
-        📦 Salvar produção
-      </button>
-
-    </form>
-
-  </div>
-
-  <div style="height:14px"></div>
-
-  <div class="card">
-    <div class="label">Produção registrada hoje</div>
-    <div class="value purple" id="productionToday">0</div>
-  </div>
-
+<h2>📦 Produção</h2>
+<div class="card"><form onsubmit="saveProduction(event)"><div class="field"><label>Quantidade produzida</label><input id="productionQty" type="number" min="1" required></div><div class="field"><label>Observação</label><input id="productionNote" type="text" placeholder="Ex.: produção da manhã"></div><button class="primary" type="submit">📦 Salvar produção</button></form></div>
+<div style="height:14px"></div><div class="grid"><div class="card"><div class="label">Estoque disponível</div><div class="value purple" id="productionStock">0</div></div><div class="card"><div class="label">Produção registrada hoje</div><div class="value purple" id="productionToday">0</div></div><div class="card full"><div class="label">Produção total</div><div class="value purple" id="productionTotal">0</div></div></div>
+<div style="height:14px"></div><div class="card"><h3 style="margin-bottom:12px">Histórico de produção</h3><div id="productionList" class="list"></div></div>
 </section>
 
-
-<!-- CAIXA -->
 <section id="cash">
-
-  <h2>💵 Caixa</h2>
-
-  <div class="card">
-
-    <form onsubmit="addCash(event)">
-
-      <div class="row">
-
-        <div class="field">
-          <label>Tipo</label>
-          <select id="cashType">
-            <option value="Entrada">Entrada</option>
-            <option value="Saída">Saída</option>
-          </select>
-        </div>
-
-        <div class="field">
-          <label>Valor</label>
-          <input id="cashValue" type="number" min="0" step=".01" required>
-        </div>
-
-      </div>
-
-      <div class="field">
-        <label>Descrição</label>
-        <input id="cashDescription" type="text" placeholder="Ex.: compra de ingredientes">
-      </div>
-
-      <button class="primary" type="submit">
-        💰 Registrar movimento
-      </button>
-
-    </form>
-
-  </div>
-
-  <div style="height:14px"></div>
-
-  <div class="grid">
-
-    <div class="card">
-      <div class="label">Entradas</div>
-      <div class="value green" id="cashIn">R$ 0,00</div>
-    </div>
-
-    <div class="card">
-      <div class="label">Saídas</div>
-      <div class="value red" id="cashOut">R$ 0,00</div>
-    </div>
-
-    <div class="card full">
-      <div class="label">Saldo</div>
-      <div class="value purple" id="cashBalance">R$ 0,00</div>
-    </div>
-
-  </div>
-
-  <div style="height:14px"></div>
-
-  <div class="card">
-    <h3 style="margin-bottom:12px">Movimentações</h3>
-    <div id="cashList" class="list"></div>
-  </div>
-
+<h2>💵 Caixa</h2>
+<div class="notice">💜 Vendas registradas entram automaticamente no Caixa. Use o formulário abaixo para gastos ou outros movimentos.</div>
+<div style="height:12px"></div>
+<div class="card"><form onsubmit="addCash(event)"><div class="row"><div class="field"><label>Tipo</label><select id="cashType"><option value="Entrada">Entrada</option><option value="Saída">Saída</option></select></div><div class="field"><label>Valor</label><input id="cashValue" type="number" min="0" step=".01" required></div></div><div class="field"><label>Descrição</label><input id="cashDescription" type="text" placeholder="Ex.: compra de ingredientes"></div><button class="primary" type="submit">💰 Registrar movimento</button></form></div>
+<div style="height:14px"></div><div class="grid"><div class="card"><div class="label">Entradas</div><div class="value green" id="cashIn">R$ 0,00</div></div><div class="card"><div class="label">Saídas</div><div class="value red" id="cashOut">R$ 0,00</div></div><div class="card full"><div class="label">Saldo</div><div class="value purple" id="cashBalance">R$ 0,00</div></div></div>
+<div style="height:14px"></div><div class="card"><h3 style="margin-bottom:12px">Movimentações</h3><div id="cashList" class="list"></div></div>
 </section>
 
-
-<!-- CONFIGURAÇÕES -->
 <section id="settings">
-
-  <h2>⚙️ Configurações</h2>
-
-  <div class="card">
-
-    <form onsubmit="saveSettings(event)">
-
-      <div class="field">
-        <label>Preço de venda por garrafinha</label>
-        <input id="settingPrice" type="number" min="0" step=".01">
-      </div>
-
-      <div class="field">
-        <label>Custo médio estimado por garrafinha</label>
-        <input id="settingCost" type="number" min="0" step=".01">
-      </div>
-
-      <div class="field">
-        <label>Meta de faturamento</label>
-        <input id="settingGoal" type="number" min="0" step=".01">
-      </div>
-
-      <button class="primary" type="submit">
-        💾 Salvar configurações
-      </button>
-
-    </form>
-
-  </div>
-
-  <div class="notice">
-    💜 Os dados ficam salvos neste dispositivo.
-  </div>
-
+<h2>⚙️ Configurações e backup</h2>
+<div class="card"><form onsubmit="saveSettings(event)"><div class="field"><label>Preço de venda por garrafinha</label><input id="settingPrice" type="number" min="0" step=".01"></div><div class="field"><label>Custo médio estimado por garrafinha</label><input id="settingCost" type="number" min="0" step=".01"></div><div class="field"><label>Meta de faturamento do dia</label><input id="settingGoal" type="number" min="0" step=".01"></div><div class="field"><label>Estoque inicial</label><input id="settingInitialStock" type="number" min="0" step="1"></div><div class="field"><label>Aviso de estoque baixo a partir de</label><input id="settingLowStock" type="number" min="0" step="1"></div><button class="primary" type="submit">💾 Salvar configurações</button></form></div>
+<div style="height:14px"></div><div class="card"><h3>💾 Backup dos dados</h3><p class="mini">Exporte uma cópia das vendas, produção, caixa e configurações. O arquivo pode ser importado neste aparelho depois.</p><div class="actions"><button class="secondary" onclick="exportBackup()">⬇️ Exportar backup</button><button class="secondary" onclick="document.getElementById('importFile').click()">⬆️ Importar backup</button></div><input id="importFile" type="file" accept="application/json,.json" style="display:none" onchange="importBackup(event)"></div>
+<div class="notice">💜 Os dados continuam salvos no navegador deste dispositivo. O backup permite guardar uma cópia fora dele.</div>
 </section>
-
 </main>
 
-
-<!-- MENU -->
 <nav>
-
-  <button id="n-home" class="active" onclick="showTab('home')">
-    <span class="nav-icon">🏠</span>
-    Início
-  </button>
-
-  <button id="n-sell" onclick="showTab('sell')">
-    <span class="nav-icon">🧾</span>
-    Venda
-  </button>
-
-  <button id="n-sales" onclick="showTab('sales')">
-    <span class="nav-icon">📊</span>
-    Vendas
-  </button>
-
-  <button id="n-production" onclick="showTab('production')">
-    <span class="nav-icon">📦</span>
-    Produção
-  </button>
-
-  <button id="n-cash" onclick="showTab('cash')">
-    <span class="nav-icon">💵</span>
-    Caixa
-  </button>
-
+<button id="n-home" class="active" onclick="showTab('home')"><span class="nav-icon">🏠</span>Início</button>
+<button id="n-sell" onclick="showTab('sell')"><span class="nav-icon">🧾</span>Venda</button>
+<button id="n-sales" onclick="showTab('sales')"><span class="nav-icon">📊</span>Vendas</button>
+<button id="n-production" onclick="showTab('production')"><span class="nav-icon">📦</span>Produção</button>
+<button id="n-cash" onclick="showTab('cash')"><span class="nav-icon">💵</span>Caixa</button>
 </nav>
 
-
 <script>
-
-const KEY="roxoManiaAtualizadoV3";
-
-let data=JSON.parse(localStorage.getItem(KEY)) || {
-  sales:[],
-  cash:[],
-  production:[],
-  settings:{
-    price:15,
-    cost:0,
-    goal:300
-  }
-};
-
-const brl=v=>
-  Number(v||0).toLocaleString("pt-BR",{
-    style:"currency",
-    currency:"BRL"
-  });
-
-function save(){
-  localStorage.setItem(KEY,JSON.stringify(data));
+const KEY="roxoManiaAtualizadoV4";
+const OLD_KEY="roxoManiaAtualizadoV3";
+const defaults={sales:[],cash:[],production:[],settings:{price:15,cost:0,goal:300,initialStock:0,lowStock:5}};
+function loadData(){
+  try{const current=JSON.parse(localStorage.getItem(KEY));if(current)return {...defaults,...current,settings:{...defaults.settings,...(current.settings||{})}}}catch(e){}
+  try{const old=JSON.parse(localStorage.getItem(OLD_KEY));if(old){const migrated={...defaults,...old,settings:{...defaults.settings,...(old.settings||{})}};if(!("initialStock" in (old.settings||{}))){const sold=(migrated.sales||[]).reduce((a,x)=>a+Number(x.qty||0),0);const produced=(migrated.production||[]).reduce((a,x)=>a+Number(x.qty||0),0);migrated.settings.initialStock=Math.max(0,sold-produced)}return migrated}}catch(e){}
+  return structuredClone(defaults);
 }
-
-function today(){
-  return new Date().toISOString().slice(0,10);
-}
-
-function dateBR(d){
-  if(!d)return "";
-  return new Date(d+"T12:00:00").toLocaleDateString("pt-BR");
-}
-
-function showTab(id){
-
-  document.querySelectorAll("section")
-    .forEach(s=>s.classList.remove("show"));
-
-  document.getElementById(id).classList.add("show");
-
-  document.querySelectorAll("nav button")
-    .forEach(b=>b.classList.remove("active"));
-
-  const nav=document.getElementById("n-"+id);
-
-  if(nav) nav.classList.add("active");
-
-  render();
-  window.scrollTo({top:0,behavior:"smooth"});
-}
-
-
-function normalizeWhatsApp(phone){
-  let digits=String(phone||"").replace(/\D/g,"");
-
-  if(digits.startsWith("00")) digits=digits.slice(2);
-  if(digits.startsWith("55")) return digits;
-
-  if(digits.length===10 || digits.length===11){
-    return "55"+digits;
-  }
-
-  return "";
-}
-
-function whatsappMessage(sale){
-  const lines=[
-    "💜 *Roxo Mania*",
-    "",
-    `Olá, ${sale.customerName}! Seu pedido foi registrado com sucesso. 🥤`,
-    "",
-    "🧾 *Detalhes do pedido:*",
-    `• Sabor: ${sale.flavor}`,
-    `• Quantidade: ${sale.qty} garrafinha(s)`,
-    `• Valor unitário: ${brl(sale.price)}`,
-    `• *Total: ${brl(sale.total)}*`,
-    `• Pagamento: ${sale.payment}`,
-    `• ${sale.delivery}${sale.address ? ": "+sale.address : ""}`,
-    sale.note ? `• Observação: ${sale.note}` : "",
-    "",
-    `📅 Data: ${dateBR(sale.date)}`,
-    "",
-    "Muito mais que açaí. Uma experiência. 💜"
-  ];
-
-  return lines.filter(Boolean).join("\n");
-}
-
+let data=loadData();
+const brl=v=>Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+function save(){localStorage.setItem(KEY,JSON.stringify(data))}
+function today(){return new Date().toISOString().slice(0,10)}
+function dateBR(d){return d?new Date(d+"T12:00:00").toLocaleDateString("pt-BR"):""}
+function showTab(id){document.querySelectorAll("section").forEach(s=>s.classList.remove("show"));document.getElementById(id).classList.add("show");document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));const n=document.getElementById("n-"+id);if(n)n.classList.add("active");render();window.scrollTo({top:0,behavior:"smooth"})}
+function normalizeWhatsApp(phone){let d=String(phone||"").replace(/\D/g,"");if(d.startsWith("00"))d=d.slice(2);if(d.startsWith("55"))return d;if(d.length===10||d.length===11)return"55"+d;return""}
+function whatsappMessage(s){return["💜 *Roxo Mania*","",`Olá, ${s.customerName}! Seu pedido foi registrado com sucesso. 🥤`,"","🧾 *Detalhes do pedido:*",`• Sabor: ${s.flavor}`,`• Quantidade: ${s.qty} garrafinha(s)`,`• Valor unitário: ${brl(s.price)}`,`• *Total: ${brl(s.total)}*`,`• Pagamento: ${s.payment}`,`• ${s.delivery}${s.address?": "+s.address:""}`,s.note?`• Observação: ${s.note}`:"","",`📅 Data: ${dateBR(s.date)}`,"","Muito mais que açaí. Uma experiência. 💜"].filter(Boolean).join("\n")}
+function totalProduced(){return data.production.reduce((a,x)=>a+Number(x.qty||0),0)}
+function totalSold(){return data.sales.reduce((a,x)=>a+Number(x.qty||0),0)}
+function stock(){return Number(data.settings.initialStock||0)+totalProduced()-totalSold()}
+function stockClass(v){return v<=0?"stock-out":v<=Number(data.settings.lowStock||0)?"stock-low":"stock-ok"}
 function addSale(e){
-
-  e.preventDefault();
-
-  const qty=Number(document.getElementById("saleQty").value);
-  const price=Number(document.getElementById("salePrice").value);
-  const flavor=document.getElementById("saleFlavor").value;
-  const date=document.getElementById("saleDate").value;
-
-  const customerName=document.getElementById("customerName").value.trim();
-  const customerPhone=document.getElementById("customerPhone").value.trim();
-  const payment=document.getElementById("paymentMethod").value;
-  const delivery=document.getElementById("deliveryMethod").value;
-  const address=document.getElementById("customerAddress").value.trim();
-  const note=document.getElementById("saleNote").value.trim();
-
-  const whatsapp=normalizeWhatsApp(customerPhone);
-
-  if(!qty || !flavor || !date || !customerName || !payment || !delivery){
-    alert("Preencha todos os campos obrigatórios. 💜");
-    return;
-  }
-
-  if(!whatsapp){
-    alert("Digite um número de WhatsApp válido com DDD. Ex.: (99) 99999-9999");
-    return;
-  }
-
-  const sale={
-    id:Date.now(),
-    date,
-    flavor,
-    qty,
-    price,
-    total:qty*price,
-    customerName,
-    customerPhone,
-    payment,
-    delivery,
-    address,
-    note
-  };
-
-  data.sales.push(sale);
-
-  save();
-
-  e.target.reset();
-
-  document.getElementById("saleDate").value=today();
-  document.getElementById("salePrice").value=data.settings.price;
-
-  render();
-
-  const message=whatsappMessage(sale);
-  const url=`https://wa.me/${whatsapp}?text=${encodeURIComponent(message)}`;
-
-  window.location.href=url;
+ e.preventDefault();
+ const qty=Number(saleQty.value),price=Number(salePrice.value),flavor=saleFlavor.value,date=saleDate.value,customerName=customerNameEl().value.trim(),customerPhone=customerPhoneEl().value.trim(),payment=paymentMethod.value,delivery=deliveryMethod.value,address=customerAddress.value.trim(),note=saleNote.value.trim();
+ const whatsapp=normalizeWhatsApp(customerPhone);
+ if(!qty||!flavor||!date||!customerName||!payment||!delivery){alert("Preencha todos os campos obrigatórios. 💜");return}
+ if(!whatsapp){alert("Digite um número de WhatsApp válido com DDD. Ex.: (99) 99999-9999");return}
+ if(qty>stock()){alert(`Estoque insuficiente. Você tem ${stock()} garrafinha(s) disponível(is). 📦`);return}
+ const sale={id:Date.now(),date,flavor,qty,price,total:qty*price,customerName,customerPhone,payment,delivery,address,note};
+ data.sales.push(sale);
+ data.cash.push({id:Date.now()+1,date,type:"Entrada",value:sale.total,description:`Venda • ${customerName} • ${flavor} • ${payment}`,saleId:sale.id});
+ save();e.target.reset();saleDate.value=today();salePrice.value=data.settings.price;render();
+ location.href=`https://wa.me/${whatsapp}?text=${encodeURIComponent(whatsappMessage(sale))}`;
 }
-
-function sendSaleWhatsApp(id){
-  const sale=data.sales.find(x=>x.id===id);
-
-  if(!sale || !sale.customerPhone){
-    alert("Esta venda não possui um WhatsApp cadastrado.");
-    return;
-  }
-
-  const whatsapp=normalizeWhatsApp(sale.customerPhone);
-
-  if(!whatsapp){
-    alert("O WhatsApp cadastrado nesta venda não é válido.");
-    return;
-  }
-
-  const message=whatsappMessage(sale);
-  window.location.href=
-    `https://wa.me/${whatsapp}?text=${encodeURIComponent(message)}`;
-}
-
-
-
-function addCash(e){
-
-  e.preventDefault();
-
-  const type=document.getElementById("cashType").value;
-  const value=Number(document.getElementById("cashValue").value);
-  const description=document.getElementById("cashDescription").value;
-
-  if(!value)return;
-
-  data.cash.push({
-    id:Date.now(),
-    date:today(),
-    type,
-    value,
-    description
-  });
-
-  save();
-
-  e.target.reset();
-
-  render();
-
-  alert("Movimentação registrada! 💰");
-}
-
-
-function saveProduction(e){
-
-  e.preventDefault();
-
-  const qty=Number(document.getElementById("productionQty").value);
-  const note=document.getElementById("productionNote").value;
-
-  if(qty<0)return;
-
-  data.production.push({
-    id:Date.now(),
-    date:today(),
-    qty,
-    note
-  });
-
-  save();
-
-  e.target.reset();
-
-  render();
-
-  alert("Produção salva! 📦");
-}
-
-
-function saveSettings(e){
-
-  e.preventDefault();
-
-  data.settings.price=
-    Number(document.getElementById("settingPrice").value)||0;
-
-  data.settings.cost=
-    Number(document.getElementById("settingCost").value)||0;
-
-  data.settings.goal=
-    Number(document.getElementById("settingGoal").value)||0;
-
-  save();
-
-  document.getElementById("salePrice").value=data.settings.price;
-
-  render();
-
-  alert("Configurações salvas! ⚙️");
-}
-
-
-function clearSales(){
-
-  if(!confirm("Apagar todas as vendas?"))return;
-
-  data.sales=[];
-
-  save();
-
-  render();
-}
-
-
+function customerNameEl(){return document.getElementById("customerName")}function customerPhoneEl(){return document.getElementById("customerPhone")}
+function sendSaleWhatsApp(id){const s=data.sales.find(x=>x.id===id);const w=normalizeWhatsApp(s?.customerPhone);if(!s||!w){alert("Esta venda não possui um WhatsApp válido.");return}location.href=`https://wa.me/${w}?text=${encodeURIComponent(whatsappMessage(s))}`}
+function addCash(e){e.preventDefault();const type=cashType.value,value=Number(cashValue.value),description=cashDescription.value.trim();if(!value)return;data.cash.push({id:Date.now(),date:today(),type,value,description});save();e.target.reset();render();alert("Movimentação registrada! 💰")}
+function saveProduction(e){e.preventDefault();const qty=Number(productionQty.value),note=productionNote.value.trim();if(!qty||qty<1)return;data.production.push({id:Date.now(),date:today(),qty,note});save();e.target.reset();render();alert("Produção salva e adicionada ao estoque! 📦")}
+function saveSettings(e){e.preventDefault();data.settings.price=Number(settingPrice.value)||0;data.settings.cost=Number(settingCost.value)||0;data.settings.goal=Number(settingGoal.value)||0;data.settings.initialStock=Math.max(0,Number(settingInitialStock.value)||0);data.settings.lowStock=Math.max(0,Number(settingLowStock.value)||0);save();render();alert("Configurações salvas! ⚙️")}
+function clearSales(){if(!confirm("Apagar todas as vendas e as entradas automáticas de venda do Caixa?"))return;const ids=new Set(data.sales.map(x=>x.id));data.sales=[];data.cash=data.cash.filter(x=>!ids.has(x.saleId));save();render()}
+function periodStart(){const p=reportPeriod?.value||"today";if(p==="all")return null;const d=new Date();d.setDate(d.getDate()-(Number(p)-1));return d.toISOString().slice(0,10)}
+function filteredSales(){const start=periodStart();return start?data.sales.filter(x=>x.date>=start):data.sales}
+function exportBackup(){const blob=new Blob([JSON.stringify({version:4,exportedAt:new Date().toISOString(),data},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="roxo-mania-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function importBackup(e){const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const obj=JSON.parse(r.result);if(!obj.data||!Array.isArray(obj.data.sales)||!Array.isArray(obj.data.production)||!Array.isArray(obj.data.cash))throw Error();data={...defaults,...obj.data,settings:{...defaults.settings,...(obj.data.settings||{})}};save();render();alert("Backup importado com sucesso! 💜")}catch(err){alert("Não foi possível importar esse backup.")}e.target.value=""};r.readAsText(f)}
 function render(){
-
-  const t=today();
-
-  document.getElementById("todayText").textContent=
-    new Date().toLocaleDateString("pt-BR",{
-      weekday:"long",
-      day:"2-digit",
-      month:"long"
-    });
-
-
-  // Vendas de hoje
-  const todaySales=
-    data.sales.filter(x=>x.date===t);
-
-  const revenue=todaySales
-    .reduce((a,x)=>a+x.total,0);
-
-  const qty=todaySales
-    .reduce((a,x)=>a+x.qty,0);
-
-
-  document.getElementById("todayRevenue").textContent=
-    brl(revenue);
-
-  document.getElementById("todayQty").textContent=
-    qty;
-
-  document.getElementById("goalValue").textContent=
-    brl(data.settings.goal);
-
-
-  // Meta
-  const goal=Number(data.settings.goal)||0;
-
-  let percent=goal
-    ? Math.round((revenue/goal)*100)
-    : 0;
-
-  percent=Math.min(percent,100);
-
-  document.getElementById("goalPercent").textContent=
-    percent+"%";
-
-  document.getElementById("goalBar").style.width=
-    percent+"%";
-
-
-  // Produção
-  const productionToday=data.production
-    .filter(x=>x.date===t)
-    .reduce((a,x)=>a+x.qty,0);
-
-  document.getElementById("productionValue").textContent=
-    productionToday;
-
-  document.getElementById("productionToday").textContent=
-    productionToday;
-
-
-  // Total vendas
-  const allRevenue=data.sales
-    .reduce((a,x)=>a+x.total,0);
-
-  const allQty=data.sales
-    .reduce((a,x)=>a+x.qty,0);
-
-  document.getElementById("allRevenue").textContent=
-    brl(allRevenue);
-
-  document.getElementById("allQty").textContent=
-    allQty;
-
-
-  // Lista de vendas
-  const salesHTML=data.sales
-    .slice()
-    .reverse()
-    .slice(0,30)
-    .map(x=>`
-      <div class="item">
-        <div>
-          <strong>${x.customerName ? x.customerName+" • "+x.flavor : x.flavor}</strong>
-          <small>${dateBR(x.date)} • ${x.qty} unidade(s)${x.payment ? " • "+x.payment : ""}</small>
-        </div>
-        <div style="text-align:right">
-          <span class="badge green">${brl(x.total)}</span>
-          ${x.customerPhone ? `<button class="secondary" style="display:block;margin-top:6px;padding:6px 8px;font-size:11px" onclick="sendSaleWhatsApp(${x.id})">📲 WhatsApp</button>` : ""}
-        </div>
-      </div>
-    `).join("");
-
-  document.getElementById("salesList").innerHTML=
-    salesHTML ||
-    `<div class="empty">Nenhuma venda registrada ainda. 💜</div>`;
-
-  document.getElementById("allSalesList").innerHTML=
-    salesHTML ||
-    `<div class="empty">Nenhuma venda registrada ainda.</div>`;
-
-
-  // Caixa
-  const entradas=data.cash
-    .filter(x=>x.type==="Entrada")
-    .reduce((a,x)=>a+x.value,0);
-
-  const saidas=data.cash
-    .filter(x=>x.type==="Saída")
-    .reduce((a,x)=>a+x.value,0);
-
-  document.getElementById("cashIn").textContent=
-    brl(entradas);
-
-  document.getElementById("cashOut").textContent=
-    brl(saidas);
-
-  document.getElementById("cashBalance").textContent=
-    brl(entradas-saidas);
-
-
-  const cashHTML=data.cash
-    .slice()
-    .reverse()
-    .slice(0,30)
-    .map(x=>`
-      <div class="item">
-        <div>
-          <strong>${x.description || "Movimentação"}</strong>
-          <small>${dateBR(x.date)} • ${x.type}</small>
-        </div>
-        <span class="badge ${x.type==="Entrada"?"green":"red"}">
-          ${x.type==="Entrada"?"+":"-"} ${brl(x.value)}
-        </span>
-      </div>
-    `).join("");
-
-  document.getElementById("cashList").innerHTML=
-    cashHTML ||
-    `<div class="empty">Nenhuma movimentação registrada.</div>`;
-
-
-  // Configurações
-  document.getElementById("settingPrice").value=
-    data.settings.price;
-
-  document.getElementById("settingCost").value=
-    data.settings.cost;
-
-  document.getElementById("settingGoal").value=
-    data.settings.goal;
+ const t=today(),ts=data.sales.filter(x=>x.date===t),revenue=ts.reduce((a,x)=>a+x.total,0),qty=ts.reduce((a,x)=>a+x.qty,0),prod=data.production.filter(x=>x.date===t).reduce((a,x)=>a+x.qty,0),goal=Number(data.settings.goal)||0,pct=goal?Math.min(100,Math.round(revenue/goal*100)):0,cost=Number(data.settings.cost)||0;
+ todayText.textContent=new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"});todayRevenue.textContent=brl(revenue);todayQty.textContent=qty;goalValue.textContent=brl(goal);productionValue.textContent=prod;todayProfit.textContent=brl(revenue-qty*cost);goalPercent.textContent=pct+"%";goalBar.style.width=pct+"%";
+ const st=stock();stockValue.textContent=st;productionStock.textContent=st;stockBadge.textContent=st<=0?"sem estoque":st<=Number(data.settings.lowStock||0)?"estoque baixo":"disponíveis";stockBadge.className="badge "+stockClass(st);
+ stockNotice.textContent=st<=0?"⚠️ Estoque zerado. Registre uma produção antes de vender.":st<=Number(data.settings.lowStock||0)?`⚠️ Estoque baixo: restam ${st} garrafinha(s).`:"💜 Estoque calculado automaticamente: produção + estoque inicial − vendas.";
+ saleStockInfo.textContent=`Estoque disponível agora: ${st} garrafinha(s)`;defaultPriceNotice.textContent=brl(data.settings.price);salePrice.value=data.settings.price;
+ allRevenue.textContent=brl(data.sales.reduce((a,x)=>a+x.total,0));allQty.textContent=totalSold();avgTicket.textContent=brl(data.sales.length?data.sales.reduce((a,x)=>a+x.total,0)/data.sales.length:0);customerCount.textContent=new Set(data.sales.map(x=>x.customerName?.toLowerCase()).filter(Boolean)).size;
+ const fs=filteredSales(),fr=fs.reduce((a,x)=>a+x.total,0),fq=fs.reduce((a,x)=>a+x.qty,0);reportSummary.innerHTML=`<strong>${fs.length}</strong> venda(s) • <strong>${fq}</strong> garrafinha(s) • <strong>${brl(fr)}</strong> faturados no período`;
+ const saleHTML=data.sales.slice().reverse().slice(0,50).map(x=>`<div class="item"><div><strong>${esc(x.customerName?x.customerName+" • ":"")}${esc(x.flavor)}</strong><small>${dateBR(x.date)} • ${x.qty} unidade(s)${x.payment?" • "+esc(x.payment):""}</small></div><div style="text-align:right"><span class="badge green">${brl(x.total)}</span>${x.customerPhone?`<button class="secondary" style="display:block;margin-top:6px;padding:6px 8px;font-size:11px" onclick="sendSaleWhatsApp(${x.id})">📲 WhatsApp</button>`:""}</div></div>`).join("");
+ salesList.innerHTML=saleHTML||`<div class="empty">Nenhuma venda registrada ainda. 💜</div>`;allSalesList.innerHTML=saleHTML||`<div class="empty">Nenhuma venda registrada ainda.</div>`;
+ productionTotal.textContent=totalProduced();productionToday.textContent=prod;productionList.innerHTML=data.production.slice().reverse().slice(0,30).map(x=>`<div class="item"><div><strong>${x.qty} garrafinha(s)</strong><small>${dateBR(x.date)}${x.note?" • "+esc(x.note):""}</small></div><span class="badge purple">+${x.qty}</span></div>`).join("")||`<div class="empty">Nenhuma produção registrada.</div>`;
+ const cin=data.cash.filter(x=>x.type==="Entrada").reduce((a,x)=>a+x.value,0),cout=data.cash.filter(x=>x.type==="Saída").reduce((a,x)=>a+x.value,0);cashIn.textContent=brl(cin);cashOut.textContent=brl(cout);cashBalance.textContent=brl(cin-cout);cashList.innerHTML=data.cash.slice().reverse().slice(0,50).map(x=>`<div class="item"><div><strong>${esc(x.description||"Movimentação")}</strong><small>${dateBR(x.date)} • ${x.type}</small></div><span class="badge ${x.type==="Entrada"?"green":"red"}">${x.type==="Entrada"?"+":"-"} ${brl(x.value)}</span></div>`).join("")||`<div class="empty">Nenhuma movimentação registrada.</div>`;
+ settingPrice.value=data.settings.price;settingCost.value=data.settings.cost;settingGoal.value=data.settings.goal;settingInitialStock.value=data.settings.initialStock;settingLowStock.value=data.settings.lowStock;
 }
-
-
-document.getElementById("saleDate").value=today();
-
-document.getElementById("salePrice").value=
-  data.settings.price;
-
-render();
-
+saleDate.value=today();render();
 </script>
-
 </body>
 </html>
