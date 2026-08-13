@@ -143,7 +143,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 
 <script>
 const KEY="roxoManiaAtualizadoV6";
-const OLD_KEYS=["roxoManiaAtualizadoV5","roxoManiaAtualizadoV4","roxoManiaAtualizadoV3"];
+const OLD_KEYS=["roxoManiaAtualizadoV8","roxoManiaAtualizadoV7","roxoManiaAtualizadoV5","roxoManiaAtualizadoV4","roxoManiaAtualizadoV3"];
 const defaultProducts=[
  {id:"tradicional",name:"Tradicional",price:15,cost:8.48,category:"Açaí",active:true},
  {id:"leitinho",name:"Creme de leitinho",price:15,cost:11.48,category:"Açaí",active:true},
@@ -310,7 +310,6 @@ function repairSaleCashEntries(){
     // Taxa de entrega pertence ao faturamento/caixa e não gera saída automática.
     const oldDelivery=data.cash.filter(x=>x.saleId===s.id&&x.kind==="delivery");
     if(oldDelivery.length){data.cash=data.cash.filter(x=>!(x.saleId===s.id&&x.kind==="delivery"));changed=true;}
-    else if(de){data.cash=data.cash.filter(x=>x!==de);changed=true;}
   }
   if(changed)save();
 }
