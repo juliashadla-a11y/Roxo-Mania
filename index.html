@@ -27,7 +27,7 @@ nav{position:fixed;z-index:20;bottom:0;left:0;right:0;background:rgba(255,255,25
 .mini{font-size:12px;color:var(--muted)}.stock-ok{background:#E9F8F1;color:#18794E}.stock-low{background:#FFF4D6;color:#8A5A00}.stock-out{background:#FDECEC;color:#A62E2E}
 table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:9px 6px;border-bottom:1px solid var(--borda)}th{color:var(--muted);font-weight:700}
 @media(max-width:420px){.grid{grid-template-columns:1fr 1fr}.row{grid-template-columns:1fr}.value{font-size:20px}}
-</style>
+.order-items{display:flex;flex-direction:column;gap:8px}.order-row{display:grid;grid-template-columns:1fr 70px 90px 34px;gap:7px;align-items:center;background:#faf8fc;padding:8px;border-radius:12px}.order-row select,.order-row input{padding:10px;font-size:14px}.order-row .remove{padding:9px;background:#FDECEC;color:var(--vermelho);min-width:34px}.metric-wide{grid-column:1/-1}.product-card{display:flex;justify-content:space-between;align-items:center;gap:10px}.product-meta{font-size:12px;color:var(--muted);margin-top:4px}.kpi-note{font-size:12px;color:var(--muted);margin-top:6px}.capital{background:linear-gradient(135deg,#f5eaff,#fff);border-color:#dcc4f5}.success{background:#E9F8F1;color:#18794E}.modal-note{font-size:12px;color:var(--muted)}@media(max-width:520px){.order-row{grid-template-columns:1fr 58px 78px 34px}}</style>
 </head>
 <body>
 <header><div class="brand">💜 Roxo Mania</div><div class="subtitle">Muito mais que açaí. Uma experiência.</div></header>
@@ -42,6 +42,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <div class="card"><div class="label">🎯 Meta do dia</div><div class="value" id="goalValue">R$ 300,00</div></div>
 <div class="card"><div class="label">📦 Produção hoje</div><div class="value purple" id="productionValue">0</div></div>
 <div class="card"><div class="label">📈 Lucro estimado hoje</div><div class="value green" id="todayProfit">R$ 0,00</div></div>
+<div class="card capital"><div class="label">💼 Capital de giro disponível</div><div class="value purple" id="workingCapital">R$ 0,00</div><div class="kpi-note" id="workingCapitalNote">Caixa + estoque pelo custo estimado</div></div>
+<div class="card"><div class="label">📅 Lucro no mês</div><div class="value green" id="monthProfit">R$ 0,00</div></div>
 <div class="card full"><div class="total"><div><div class="label">Progresso da meta</div><strong id="goalPercent">0%</strong></div><span>🚀</span></div><div class="progress"><div id="goalBar"></div></div></div>
 </div>
 <div class="actions" style="margin-top:14px"><button class="secondary" onclick="showTab('sell')">🧾 Nova venda</button><button class="secondary" onclick="showTab('production')">📦 Registrar produção</button><button class="ghost" onclick="showTab('settings')">⚙️ Configurações</button></div>
@@ -54,22 +56,21 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <form onsubmit="addSale(event)">
 <div class="field"><label>Data</label><input id="saleDate" type="date" required></div>
 <div class="row"><div class="field"><label>Nome do cliente</label><input id="customerName" type="text" placeholder="Ex.: Maria" required></div><div class="field"><label>WhatsApp do cliente</label><input id="customerPhone" type="tel" inputmode="tel" placeholder="(99) 99999-9999" required></div></div>
-<div class="field"><label>Sabor</label><select id="saleFlavor" required><option value="">Selecione</option><option>Tradicional</option><option>Creme de leitinho</option><option>Creme de avelã</option><option>Creme de morango</option><option>Creme de maracujá</option></select></div>
-<div class="row"><div class="field"><label>Quantidade</label><input id="saleQty" type="number" min="1" value="1" required></div><div class="field"><label>Valor unitário</label><input id="salePrice" type="number" min="0" step=".01" value="15" required></div></div>
+<div class="total"><div><div class="label">Itens do pedido</div><strong id="orderTotal">R$ 0,00</strong></div><span>🥤</span></div>
+<div id="orderItems" class="order-items"></div>
+<button class="secondary" type="button" onclick="addOrderItem()">➕ Adicionar sabor</button>
 <div class="row"><div class="field"><label>Forma de pagamento</label><select id="paymentMethod" required><option value="">Selecione</option><option>Pix</option><option>Dinheiro</option><option>Cartão</option></select></div><div class="field"><label>Entrega / retirada</label><select id="deliveryMethod" required><option value="">Selecione</option><option>Retirada</option><option>Entrega</option></select></div></div>
 <div class="field"><label>Endereço / ponto de retirada</label><input id="customerAddress" type="text" placeholder="Opcional"></div>
 <div class="field"><label>Observação do pedido</label><input id="saleNote" type="text" placeholder="Ex.: sem leite condensado"></div>
 <div id="saleStockInfo" class="notice">Estoque disponível: 0</div>
 <button class="primary" type="submit">💜 Salvar venda e enviar no WhatsApp</button>
-</form>
-</div>
-<div class="notice">Preço padrão: <strong id="defaultPriceNotice">R$ 15,00</strong> • A venda entra automaticamente no Caixa.</div>
-<h2 style="margin-top:24px">Últimas vendas</h2><div id="salesList" class="list"></div>
+</form></div>
+<div class="notice">Os preços são puxados dos produtos cadastrados. Você pode adicionar novos produtos em <strong>⚙️ Configurações → Produtos</strong>.</div>
+<h2 style="margin-top:24px">Últimos pedidos</h2><div id="salesList" class="list"></div>
 </section>
-
 <section id="sales">
 <h2>📊 Vendas</h2>
-<div class="grid"><div class="card"><div class="label">Total vendido</div><div class="value green" id="allRevenue">R$ 0,00</div></div><div class="card"><div class="label">Unidades</div><div class="value purple" id="allQty">0</div></div><div class="card"><div class="label">Ticket médio</div><div class="value purple" id="avgTicket">R$ 0,00</div></div><div class="card"><div class="label">Clientes</div><div class="value purple" id="customerCount">0</div></div></div>
+<div class="grid"><div class="card"><div class="label">Total vendido</div><div class="value green" id="allRevenue">R$ 0,00</div></div><div class="card"><div class="label">Unidades</div><div class="value purple" id="allQty">0</div></div><div class="card"><div class="label">Ticket médio</div><div class="value purple" id="avgTicket">R$ 0,00</div></div><div class="card"><div class="label">Clientes</div><div class="value purple" id="customerCount">0</div></div><div class="card"><div class="label">Lucro do mês</div><div class="value green" id="monthProfitSales">R$ 0,00</div></div></div>
 <div style="height:14px"></div><div class="card"><div class="field"><label>Período do relatório</label><select id="reportPeriod" onchange="render()"><option value="today">Hoje</option><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="all">Todo o período</option></select></div><div style="height:12px"></div><div id="reportSummary" class="notice"></div></div>
 <div style="height:14px"></div><div class="card"><div class="total"><div><div class="label">Histórico</div><h3>Vendas registradas</h3></div><span>🥤</span></div><div id="allSalesList" class="list"></div></div>
 <div class="top-actions"><button class="danger" onclick="clearSales()">Apagar vendas</button></div>
@@ -91,9 +92,18 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <div style="height:14px"></div><div class="card"><h3 style="margin-bottom:12px">Movimentações</h3><div id="cashList" class="list"></div></div>
 </section>
 
+<section id="products">
+<h2>🛍️ Produtos</h2>
+<div class="card"><form onsubmit="addProduct(event)"><div class="field"><label>Nome do produto</label><input id="productName" type="text" placeholder="Ex.: Açaí tradicional" required></div><div class="row"><div class="field"><label>Preço de venda</label><input id="productPrice" type="number" min="0" step=".01" required></div><div class="field"><label>Custo estimado</label><input id="productCost" type="number" min="0" step=".01" required></div></div><div class="field"><label>Categoria</label><input id="productCategory" type="text" placeholder="Ex.: Açaí"></div><button class="primary" type="submit">➕ Cadastrar produto</button></form></div>
+<div style="height:14px"></div><div class="card"><h3 style="margin-bottom:12px">Produtos cadastrados</h3><div id="productsList" class="list"></div></div>
+<div class="notice">💜 Produtos novos ficam disponíveis imediatamente na tela de venda.</div>
+</section>
+
 <section id="settings">
 <h2>⚙️ Configurações e backup</h2>
-<div class="card"><form onsubmit="saveSettings(event)"><div class="field"><label>Preço de venda por garrafinha</label><input id="settingPrice" type="number" min="0" step=".01"></div><div class="field"><label>Custo médio estimado por garrafinha</label><input id="settingCost" type="number" min="0" step=".01"></div><div class="field"><label>Meta de faturamento do dia</label><input id="settingGoal" type="number" min="0" step=".01"></div><div class="field"><label>Estoque inicial</label><input id="settingInitialStock" type="number" min="0" step="1"></div><div class="field"><label>Aviso de estoque baixo a partir de</label><input id="settingLowStock" type="number" min="0" step="1"></div><button class="primary" type="submit">💾 Salvar configurações</button></form></div>
+<div class="card"><form onsubmit="saveSettings(event)"><div class="field"><label>Preço de venda por garrafinha</label><input id="settingPrice" type="number" min="0" step=".01"></div><div class="field"><label>Custo médio estimado por garrafinha</label><input id="settingCost" type="number" min="0" step=".01"></div><div class="field"><label>Meta de faturamento do dia</label><input id="settingGoal" type="number" min="0" step=".01"></div><div class="field"><label>Estoque inicial</label><input id="settingInitialStock" type="number" min="0" step="1"></div><div class="field"><label>Aviso de estoque baixo a partir de</label><input id="settingLowStock" type="number" min="0" step="1"></div><div class="field"><label>Meta de capital de giro</label><input id="settingWorkingCapitalGoal" type="number" min="0" step=".01"></div><button class="primary" type="submit">💾 Salvar configurações</button></form></div>
+<div class="top-actions"><button type="button" class="secondary" onclick="showTab('products')">🛍️ Gerenciar produtos</button></div>
+<div style="height:14px"></div><div class="card"><h3>💼 Capital de giro</h3><p class="mini">O aplicativo estima o capital de giro disponível como saldo do caixa + valor do estoque pelo custo estimado.</p><div class="grid"><div class="card"><div class="label">Disponível</div><div class="value purple" id="settingsWorkingCapital">R$ 0,00</div></div><div class="card"><div class="label">Meta</div><div class="value" id="settingsWorkingCapitalGoalView">R$ 0,00</div></div></div></div>
 <div style="height:14px"></div><div class="card"><h3>💾 Backup dos dados</h3><p class="mini">Exporte uma cópia das vendas, produção, caixa e configurações. O arquivo pode ser importado neste aparelho depois.</p><div class="actions"><button class="secondary" onclick="exportBackup()">⬇️ Exportar backup</button><button class="secondary" onclick="document.getElementById('importFile').click()">⬆️ Importar backup</button></div><input id="importFile" type="file" accept="application/json,.json" style="display:none" onchange="importBackup(event)"></div>
 <div class="notice">💜 Os dados continuam salvos no navegador deste dispositivo. O backup permite guardar uma cópia fora dele.</div>
 </section>
@@ -108,13 +118,28 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 </nav>
 
 <script>
-const KEY="roxoManiaAtualizadoV4";
-const OLD_KEY="roxoManiaAtualizadoV3";
-const defaults={sales:[],cash:[],production:[],settings:{price:15,cost:0,goal:300,initialStock:0,lowStock:5}};
+const KEY="roxoManiaAtualizadoV5";
+const OLD_KEYS=["roxoManiaAtualizadoV4","roxoManiaAtualizadoV3"];
+const defaultProducts=[
+ {id:"tradicional",name:"Tradicional",price:15,cost:8.48,category:"Açaí",active:true},
+ {id:"leitinho",name:"Creme de leitinho",price:15,cost:11.48,category:"Açaí",active:true},
+ {id:"maracuja",name:"Creme de maracujá",price:15,cost:10.58,category:"Açaí",active:true},
+ {id:"avelã",name:"Creme de avelã",price:15,cost:12.48,category:"Açaí",active:true},
+ {id:"morango",name:"Creme de morango",price:15,cost:10.98,category:"Açaí",active:true}
+];
+const defaults={sales:[],cash:[],production:[],products:defaultProducts,settings:{price:15,cost:10,goal:300,initialStock:0,lowStock:5,workingCapitalGoal:500}};
+function normalizeData(base){
+  const out={...defaults,...base,settings:{...defaults.settings,...(base.settings||{})}};
+  out.products=Array.isArray(base.products)&&base.products.length?base.products:structuredClone(defaultProducts);
+  out.sales=(base.sales||[]).map(s=>{
+    if(Array.isArray(s.items)&&s.items.length)return s;
+    return {...s,items:[{productId:s.productId||String(s.flavor||"").toLowerCase(),name:s.flavor||"Produto",qty:Number(s.qty||1),price:Number(s.price||0),cost:Number(s.cost||out.settings.cost||10),total:Number(s.total||0)}]};
+  });
+  return out;
+}
 function loadData(){
-  try{const current=JSON.parse(localStorage.getItem(KEY));if(current)return {...defaults,...current,settings:{...defaults.settings,...(current.settings||{})}}}catch(e){}
-  try{const old=JSON.parse(localStorage.getItem(OLD_KEY));if(old){const migrated={...defaults,...old,settings:{...defaults.settings,...(old.settings||{})}};if(!("initialStock" in (old.settings||{}))){const sold=(migrated.sales||[]).reduce((a,x)=>a+Number(x.qty||0),0);const produced=(migrated.production||[]).reduce((a,x)=>a+Number(x.qty||0),0);migrated.settings.initialStock=Math.max(0,sold-produced)}return migrated}}catch(e){}
-  return structuredClone(defaults);
+  for(const k of [KEY,...OLD_KEYS]){try{const raw=JSON.parse(localStorage.getItem(k));if(raw){const migrated=normalizeData(raw);if(!("initialStock" in (raw.settings||{}))){const sold=migrated.sales.reduce((a,x)=>a+Number(x.qty||x.items?.reduce((z,i)=>z+i.qty,0)||0),0);const produced=(migrated.production||[]).reduce((a,x)=>a+Number(x.qty||0),0);migrated.settings.initialStock=Math.max(0,sold-produced)}return migrated}}catch(e){}}
+  return normalizeData(structuredClone(defaults));
 }
 let data=loadData();
 const brl=v=>Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
@@ -124,48 +149,57 @@ function today(){return new Date().toISOString().slice(0,10)}
 function dateBR(d){return d?new Date(d+"T12:00:00").toLocaleDateString("pt-BR"):""}
 function showTab(id){document.querySelectorAll("section").forEach(s=>s.classList.remove("show"));document.getElementById(id).classList.add("show");document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));const n=document.getElementById("n-"+id);if(n)n.classList.add("active");render();window.scrollTo({top:0,behavior:"smooth"})}
 function normalizeWhatsApp(phone){let d=String(phone||"").replace(/\D/g,"");if(d.startsWith("00"))d=d.slice(2);if(d.startsWith("55"))return d;if(d.length===10||d.length===11)return"55"+d;return""}
-function whatsappMessage(s){return["💜 *Roxo Mania*","",`Olá, ${s.customerName}! Seu pedido foi registrado com sucesso. 🥤`,"","🧾 *Detalhes do pedido:*",`• Sabor: ${s.flavor}`,`• Quantidade: ${s.qty} garrafinha(s)`,`• Valor unitário: ${brl(s.price)}`,`• *Total: ${brl(s.total)}*`,`• Pagamento: ${s.payment}`,`• ${s.delivery}${s.address?": "+s.address:""}`,s.note?`• Observação: ${s.note}`:"","",`📅 Data: ${dateBR(s.date)}`,"","Muito mais que açaí. Uma experiência. 💜"].filter(Boolean).join("\n")}
+function productById(id){return data.products.find(p=>p.id===id)}
+function activeProducts(){return data.products.filter(p=>p.active!==false)}
+function addOrderItem(productId="",qty=1){const wrap=document.getElementById("orderItems");const row=document.createElement("div");row.className="order-row";row.innerHTML=`<select class="order-product" required><option value="">Sabor/produto</option>${activeProducts().map(p=>`<option value="${esc(p.id)}" ${p.id===productId?"selected":""}>${esc(p.name)} — ${brl(p.price)}</option>`).join("")}</select><input class="order-qty" type="number" min="1" value="${qty}" required><input class="order-price" type="number" min="0" step=".01" value="0" required><button type="button" class="remove" onclick="this.parentElement.remove();updateOrderTotal()">×</button>`;wrap.appendChild(row);const sel=row.querySelector(".order-product"),price=row.querySelector(".order-price");sel.addEventListener("change",()=>{const p=productById(sel.value);price.value=p?p.price:0;updateOrderTotal()});row.querySelector(".order-qty").addEventListener("input",updateOrderTotal);price.addEventListener("input",updateOrderTotal);if(productId){const p=productById(productId);price.value=p?p.price:0}updateOrderTotal()}
+function orderItemsFromForm(){return [...document.querySelectorAll(".order-row")].map(r=>{const id=r.querySelector(".order-product").value,p=productById(id),qty=Number(r.querySelector(".order-qty").value),price=Number(r.querySelector(".order-price").value);return p&&qty>0?{productId:id,name:p.name,qty,price,cost:Number(p.cost||0),total:qty*price}:null}).filter(Boolean)}
+function updateOrderTotal(){const items=orderItemsFromForm();const total=items.reduce((a,i)=>a+i.total,0);document.getElementById("orderTotal").textContent=brl(total);const qty=items.reduce((a,i)=>a+i.qty,0);document.getElementById("saleStockInfo").textContent=`Estoque disponível agora: ${stock()} garrafinha(s) • Este pedido: ${qty} unidade(s)`}
+
+function whatsappMessage(s){const lines=["💜 *Roxo Mania*","",`Olá, ${s.customerName}! Seu pedido foi registrado com sucesso. 🥤`,"","🧾 *Detalhes do pedido:*",...s.items.map(i=>`• ${i.qty}x ${i.name} — ${brl(i.total)}`),"",`💰 *Total: ${brl(s.total)}*`,`• Pagamento: ${s.payment}`,`• ${s.delivery}${s.address?": "+s.address:""}`,s.note?`• Observação: ${s.note}`:"","",`📅 Data: ${dateBR(s.date)}`,"","Muito mais que açaí. Uma experiência. 💜"];return lines.filter(Boolean).join("\n")}
 function totalProduced(){return data.production.reduce((a,x)=>a+Number(x.qty||0),0)}
-function totalSold(){return data.sales.reduce((a,x)=>a+Number(x.qty||0),0)}
+function totalSold(){return data.sales.reduce((a,x)=>a+Number(x.qty||x.items?.reduce((z,i)=>z+i.qty,0)||0),0)}
 function stock(){return Number(data.settings.initialStock||0)+totalProduced()-totalSold()}
 function stockClass(v){return v<=0?"stock-out":v<=Number(data.settings.lowStock||0)?"stock-low":"stock-ok"}
 function addSale(e){
  e.preventDefault();
- const qty=Number(saleQty.value),price=Number(salePrice.value),flavor=saleFlavor.value,date=saleDate.value,customerName=customerNameEl().value.trim(),customerPhone=customerPhoneEl().value.trim(),payment=paymentMethod.value,delivery=deliveryMethod.value,address=customerAddress.value.trim(),note=saleNote.value.trim();
- const whatsapp=normalizeWhatsApp(customerPhone);
- if(!qty||!flavor||!date||!customerName||!payment||!delivery){alert("Preencha todos os campos obrigatórios. 💜");return}
+ const items=orderItemsFromForm(),date=saleDate.value,customerName=customerNameEl().value.trim(),customerPhone=customerPhoneEl().value.trim(),payment=paymentMethod.value,delivery=deliveryMethod.value,address=customerAddress.value.trim(),note=saleNote.value.trim(),whatsapp=normalizeWhatsApp(customerPhone);
+ if(!items.length||!date||!customerName||!payment||!delivery){alert("Preencha os dados do cliente e adicione pelo menos um produto. 💜");return}
  if(!whatsapp){alert("Digite um número de WhatsApp válido com DDD. Ex.: (99) 99999-9999");return}
- if(qty>stock()){alert(`Estoque insuficiente. Você tem ${stock()} garrafinha(s) disponível(is). 📦`);return}
- const sale={id:Date.now(),date,flavor,qty,price,total:qty*price,customerName,customerPhone,payment,delivery,address,note};
- data.sales.push(sale);
- data.cash.push({id:Date.now()+1,date,type:"Entrada",value:sale.total,description:`Venda • ${customerName} • ${flavor} • ${payment}`,saleId:sale.id});
- save();e.target.reset();saleDate.value=today();salePrice.value=data.settings.price;render();
- location.href=`https://wa.me/${whatsapp}?text=${encodeURIComponent(whatsappMessage(sale))}`;
+ const qty=items.reduce((a,i)=>a+i.qty,0);if(qty>stock()){alert(`Estoque insuficiente. Você tem ${stock()} garrafinha(s) disponível(is). 📦`);return}
+ const total=items.reduce((a,i)=>a+i.total,0),costTotal=items.reduce((a,i)=>a+i.cost*i.qty,0);const sale={id:Date.now(),date,items,qty,total,costTotal,customerName,customerPhone,payment,delivery,address,note};data.sales.push(sale);data.cash.push({id:Date.now()+1,date,type:"Entrada",value:total,description:`Venda • ${customerName} • ${items.map(i=>i.name).join(", ")} • ${payment}`,saleId:sale.id});save();e.target.reset();document.getElementById("orderItems").innerHTML="";addOrderItem();saleDate.value=today();render();location.href=`https://wa.me/${whatsapp}?text=${encodeURIComponent(whatsappMessage(s))}`;
 }
 function customerNameEl(){return document.getElementById("customerName")}function customerPhoneEl(){return document.getElementById("customerPhone")}
 function sendSaleWhatsApp(id){const s=data.sales.find(x=>x.id===id);const w=normalizeWhatsApp(s?.customerPhone);if(!s||!w){alert("Esta venda não possui um WhatsApp válido.");return}location.href=`https://wa.me/${w}?text=${encodeURIComponent(whatsappMessage(s))}`}
 function addCash(e){e.preventDefault();const type=cashType.value,value=Number(cashValue.value),description=cashDescription.value.trim();if(!value)return;data.cash.push({id:Date.now(),date:today(),type,value,description});save();e.target.reset();render();alert("Movimentação registrada! 💰")}
 function saveProduction(e){e.preventDefault();const qty=Number(productionQty.value),note=productionNote.value.trim();if(!qty||qty<1)return;data.production.push({id:Date.now(),date:today(),qty,note});save();e.target.reset();render();alert("Produção salva e adicionada ao estoque! 📦")}
-function saveSettings(e){e.preventDefault();data.settings.price=Number(settingPrice.value)||0;data.settings.cost=Number(settingCost.value)||0;data.settings.goal=Number(settingGoal.value)||0;data.settings.initialStock=Math.max(0,Number(settingInitialStock.value)||0);data.settings.lowStock=Math.max(0,Number(settingLowStock.value)||0);save();render();alert("Configurações salvas! ⚙️")}
+function saveSettings(e){e.preventDefault();data.settings.price=Number(settingPrice.value)||0;data.settings.cost=Number(settingCost.value)||10;data.settings.goal=Number(settingGoal.value)||0;data.settings.initialStock=Math.max(0,Number(settingInitialStock.value)||0);data.settings.lowStock=Math.max(0,Number(settingLowStock.value)||0);data.settings.workingCapitalGoal=Math.max(0,Number(settingWorkingCapitalGoal.value)||0);save();render();alert("Configurações salvas! ⚙️")}
+function addProduct(e){e.preventDefault();const name=productName.value.trim(),price=Number(productPrice.value),cost=Number(productCost.value),category=productCategory.value.trim()||"Açaí";if(!name||price<0||cost<0)return;data.products.push({id:"p"+Date.now(),name,price,cost,category,active:true});save();e.target.reset();render();alert("Produto cadastrado! 🛍️")}
+function toggleProduct(id){const p=productById(id);if(!p)return;p.active=p.active===false;save();render()}
+function removeProduct(id){if(!confirm("Remover este produto do cadastro? As vendas antigas serão preservadas."))return;data.products=data.products.filter(p=>p.id!==id);save();render()}
 function clearSales(){if(!confirm("Apagar todas as vendas e as entradas automáticas de venda do Caixa?"))return;const ids=new Set(data.sales.map(x=>x.id));data.sales=[];data.cash=data.cash.filter(x=>!ids.has(x.saleId));save();render()}
 function periodStart(){const p=reportPeriod?.value||"today";if(p==="all")return null;const d=new Date();d.setDate(d.getDate()-(Number(p)-1));return d.toISOString().slice(0,10)}
 function filteredSales(){const start=periodStart();return start?data.sales.filter(x=>x.date>=start):data.sales}
-function exportBackup(){const blob=new Blob([JSON.stringify({version:4,exportedAt:new Date().toISOString(),data},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="roxo-mania-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function exportBackup(){const blob=new Blob([JSON.stringify({version:5,exportedAt:new Date().toISOString(),data},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="roxo-mania-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 function importBackup(e){const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const obj=JSON.parse(r.result);if(!obj.data||!Array.isArray(obj.data.sales)||!Array.isArray(obj.data.production)||!Array.isArray(obj.data.cash))throw Error();data={...defaults,...obj.data,settings:{...defaults.settings,...(obj.data.settings||{})}};save();render();alert("Backup importado com sucesso! 💜")}catch(err){alert("Não foi possível importar esse backup.")}e.target.value=""};r.readAsText(f)}
+function monthKey(d){return String(d||"").slice(0,7)}
+function salesProfit(list){return list.reduce((a,s)=>a+Number(s.total||0)-Number(s.costTotal||s.items?.reduce((z,i)=>z+i.cost*i.qty,0)||0),0)}
+function currentCashBalance(){const cin=data.cash.filter(x=>x.type==="Entrada").reduce((a,x)=>a+x.value,0),cout=data.cash.filter(x=>x.type==="Saída").reduce((a,x)=>a+x.value,0);return cin-cout}
+function workingCapital(){const avgCost=data.products.length?data.products.reduce((a,p)=>a+Number(p.cost||0),0)/data.products.length:Number(data.settings.cost||10);return Math.max(0,currentCashBalance())+Math.max(0,stock())*avgCost}
 function render(){
- const t=today(),ts=data.sales.filter(x=>x.date===t),revenue=ts.reduce((a,x)=>a+x.total,0),qty=ts.reduce((a,x)=>a+x.qty,0),prod=data.production.filter(x=>x.date===t).reduce((a,x)=>a+x.qty,0),goal=Number(data.settings.goal)||0,pct=goal?Math.min(100,Math.round(revenue/goal*100)):0,cost=Number(data.settings.cost)||0;
- todayText.textContent=new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"});todayRevenue.textContent=brl(revenue);todayQty.textContent=qty;goalValue.textContent=brl(goal);productionValue.textContent=prod;todayProfit.textContent=brl(revenue-qty*cost);goalPercent.textContent=pct+"%";goalBar.style.width=pct+"%";
- const st=stock();stockValue.textContent=st;productionStock.textContent=st;stockBadge.textContent=st<=0?"sem estoque":st<=Number(data.settings.lowStock||0)?"estoque baixo":"disponíveis";stockBadge.className="badge "+stockClass(st);
- stockNotice.textContent=st<=0?"⚠️ Estoque zerado. Registre uma produção antes de vender.":st<=Number(data.settings.lowStock||0)?`⚠️ Estoque baixo: restam ${st} garrafinha(s).`:"💜 Estoque calculado automaticamente: produção + estoque inicial − vendas.";
- saleStockInfo.textContent=`Estoque disponível agora: ${st} garrafinha(s)`;defaultPriceNotice.textContent=brl(data.settings.price);salePrice.value=data.settings.price;
+ const t=today(),ts=data.sales.filter(x=>x.date===t),revenue=ts.reduce((a,x)=>a+x.total,0),qty=ts.reduce((a,x)=>a+x.qty,0),prod=data.production.filter(x=>x.date===t).reduce((a,x)=>a+x.qty,0),goal=Number(data.settings.goal)||0,pct=goal?Math.min(100,Math.round(revenue/goal*100)):0;
+ const thisMonth=monthKey(t),ms=data.sales.filter(x=>monthKey(x.date)===thisMonth),monthRev=ms.reduce((a,x)=>a+x.total,0),todayProfitValue=salesProfit(ts),monthProfitValue=salesProfit(ms),wc=workingCapital(),wcGoal=Number(data.settings.workingCapitalGoal)||0;
+ todayText.textContent=new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"});todayRevenue.textContent=brl(revenue);todayQty.textContent=qty;goalValue.textContent=brl(goal);productionValue.textContent=prod;todayProfit.textContent=brl(todayProfitValue);monthProfit.textContent=brl(monthProfitValue);monthProfitSales.textContent=brl(monthProfitValue);workingCapital.textContent=brl(wc);goalPercent.textContent=pct+"%";goalBar.style.width=pct+"%";
+ const st=stock();stockValue.textContent=st;productionStock.textContent=st;stockBadge.textContent=st<=0?"sem estoque":st<=Number(data.settings.lowStock||0)?"estoque baixo":"disponíveis";stockBadge.className="badge "+stockClass(st);stockNotice.textContent=st<=0?"⚠️ Estoque zerado. Registre uma produção antes de vender.":st<=Number(data.settings.lowStock||0)?`⚠️ Estoque baixo: restam ${st} garrafinha(s).`:"💜 Estoque calculado automaticamente: produção + estoque inicial − vendas.";saleStockInfo.textContent=`Estoque disponível agora: ${st} garrafinha(s)`;defaultPriceNotice.textContent=brl(data.settings.price);
  allRevenue.textContent=brl(data.sales.reduce((a,x)=>a+x.total,0));allQty.textContent=totalSold();avgTicket.textContent=brl(data.sales.length?data.sales.reduce((a,x)=>a+x.total,0)/data.sales.length:0);customerCount.textContent=new Set(data.sales.map(x=>x.customerName?.toLowerCase()).filter(Boolean)).size;
- const fs=filteredSales(),fr=fs.reduce((a,x)=>a+x.total,0),fq=fs.reduce((a,x)=>a+x.qty,0);reportSummary.innerHTML=`<strong>${fs.length}</strong> venda(s) • <strong>${fq}</strong> garrafinha(s) • <strong>${brl(fr)}</strong> faturados no período`;
- const saleHTML=data.sales.slice().reverse().slice(0,50).map(x=>`<div class="item"><div><strong>${esc(x.customerName?x.customerName+" • ":"")}${esc(x.flavor)}</strong><small>${dateBR(x.date)} • ${x.qty} unidade(s)${x.payment?" • "+esc(x.payment):""}</small></div><div style="text-align:right"><span class="badge green">${brl(x.total)}</span>${x.customerPhone?`<button class="secondary" style="display:block;margin-top:6px;padding:6px 8px;font-size:11px" onclick="sendSaleWhatsApp(${x.id})">📲 WhatsApp</button>`:""}</div></div>`).join("");
- salesList.innerHTML=saleHTML||`<div class="empty">Nenhuma venda registrada ainda. 💜</div>`;allSalesList.innerHTML=saleHTML||`<div class="empty">Nenhuma venda registrada ainda.</div>`;
+ const fs=filteredSales(),fr=fs.reduce((a,x)=>a+x.total,0),fq=fs.reduce((a,x)=>a+x.qty,0),fp=salesProfit(fs);reportSummary.innerHTML=`<strong>${fs.length}</strong> pedido(s) • <strong>${fq}</strong> garrafinha(s) • <strong>${brl(fr)}</strong> faturados • <strong>${brl(fp)}</strong> de lucro estimado`;
+ const saleHTML=data.sales.slice().reverse().slice(0,50).map(x=>{const names=(x.items||[]).map(i=>`${i.qty}x ${esc(i.name)}`).join(" • ");return `<div class="item"><div><strong>${esc(x.customerName||"")}</strong><small>${names}<br>${dateBR(x.date)} • ${x.payment?esc(x.payment):""}</small></div><div style="text-align:right"><span class="badge green">${brl(x.total)}</span>${x.customerPhone?`<button class="secondary" style="display:block;margin-top:6px;padding:6px 8px;font-size:11px" onclick="sendSaleWhatsApp(${x.id})">📲 WhatsApp</button>`:""}</div></div>`}).join("");salesList.innerHTML=saleHTML||`<div class="empty">Nenhum pedido registrado ainda. 💜</div>`;allSalesList.innerHTML=saleHTML||`<div class="empty">Nenhum pedido registrado ainda.</div>`;
  productionTotal.textContent=totalProduced();productionToday.textContent=prod;productionList.innerHTML=data.production.slice().reverse().slice(0,30).map(x=>`<div class="item"><div><strong>${x.qty} garrafinha(s)</strong><small>${dateBR(x.date)}${x.note?" • "+esc(x.note):""}</small></div><span class="badge purple">+${x.qty}</span></div>`).join("")||`<div class="empty">Nenhuma produção registrada.</div>`;
  const cin=data.cash.filter(x=>x.type==="Entrada").reduce((a,x)=>a+x.value,0),cout=data.cash.filter(x=>x.type==="Saída").reduce((a,x)=>a+x.value,0);cashIn.textContent=brl(cin);cashOut.textContent=brl(cout);cashBalance.textContent=brl(cin-cout);cashList.innerHTML=data.cash.slice().reverse().slice(0,50).map(x=>`<div class="item"><div><strong>${esc(x.description||"Movimentação")}</strong><small>${dateBR(x.date)} • ${x.type}</small></div><span class="badge ${x.type==="Entrada"?"green":"red"}">${x.type==="Entrada"?"+":"-"} ${brl(x.value)}</span></div>`).join("")||`<div class="empty">Nenhuma movimentação registrada.</div>`;
- settingPrice.value=data.settings.price;settingCost.value=data.settings.cost;settingGoal.value=data.settings.goal;settingInitialStock.value=data.settings.initialStock;settingLowStock.value=data.settings.lowStock;
+ settingPrice.value=data.settings.price;settingCost.value=data.settings.cost;settingGoal.value=data.settings.goal;settingInitialStock.value=data.settings.initialStock;settingLowStock.value=data.settings.lowStock;settingWorkingCapitalGoal.value=data.settings.workingCapitalGoal;settingsWorkingCapital.textContent=brl(wc);settingsWorkingCapitalGoalView.textContent=brl(wcGoal);
+ productsList.innerHTML=data.products.map(p=>`<div class="item product-card"><div><strong>${esc(p.name)}</strong><div class="product-meta">${esc(p.category||"Açaí")} • Venda ${brl(p.price)} • Custo ${brl(p.cost)}</div></div><div class="actions"><span class="badge ${p.active===false?"red":"green"}">${p.active===false?"inativo":"ativo"}</span><button class="secondary" style="padding:7px 9px;font-size:11px" onclick="toggleProduct('${esc(p.id)}')">${p.active===false?"Ativar":"Desativar"}</button><button class="danger" style="padding:7px 9px;font-size:11px" onclick="removeProduct('${esc(p.id)}')">Excluir</button></div></div>`).join("")||`<div class="empty">Nenhum produto cadastrado.</div>`;
+ if(document.getElementById("orderItems")&&document.getElementById("orderItems").children.length===0)addOrderItem();
 }
+
 saleDate.value=today();render();
 </script>
 </body>
