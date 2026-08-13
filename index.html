@@ -215,8 +215,6 @@ function addSale(e){
  save();
  editingSaleId=null;
  e.target.reset();document.getElementById("orderItems").innerHTML="";addOrderItem();saleDate.value=today();
-customerNameEl().addEventListener("input",fillCustomerFromName);
-customerNameEl().addEventListener("change",fillCustomerFromName);
 render();
  const waUrl=`https://wa.me/${whatsapp}?text=${encodeURIComponent(whatsappMessage(s))}`;
  window.location.assign(waUrl);
@@ -309,7 +307,7 @@ function render(){
  const t=today(),ts=data.sales.filter(x=>x.date===t),revenue=businessRevenue(ts),qty=ts.reduce((a,x)=>a+x.qty,0),prod=data.production.filter(x=>x.date===t).reduce((a,x)=>a+x.qty,0),goal=Number(data.settings.goal)||0,pct=goal?Math.min(100,Math.round(revenue/goal*100)):0;
  const thisMonth=monthKey(t),ms=data.sales.filter(x=>monthKey(x.date)===thisMonth),monthRev=businessRevenue(ms),todayProfitValue=salesProfit(ts),monthProfitValue=salesProfit(ms),wc=workingCapital(),wcGoal=Number(data.settings.workingCapitalGoal)||0;
  todayText.textContent=new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"});todayRevenue.textContent=brl(revenue);todayQty.textContent=qty;goalValue.textContent=brl(goal);productionValue.textContent=prod;todayProfit.textContent=brl(todayProfitValue);monthProfit.textContent=brl(monthProfitValue);monthProfitSales.textContent=brl(monthProfitValue);workingCapital.textContent=brl(wc);goalPercent.textContent=pct+"%";goalBar.style.width=pct+"%";
- const st=stock();stockValue.textContent=st;productionStock.textContent=st;stockBadge.textContent=st<=0?"sem estoque":st<=Number(data.settings.lowStock||0)?"estoque baixo":"disponíveis";stockBadge.className="badge "+stockClass(st);stockNotice.textContent=st<=0?"⚠️ Estoque zerado. Registre uma produção antes de vender.":st<=Number(data.settings.lowStock||0)?`⚠️ Estoque baixo: restam ${st} garrafinha(s).`:"💜 Estoque calculado automaticamente: produção + estoque inicial − vendas.";saleStockInfo.textContent=`Estoque disponível agora: ${st} garrafinha(s)`;defaultPriceNotice.textContent=brl(data.settings.price);
+ const st=stock();stockValue.textContent=st;productionStock.textContent=st;stockBadge.textContent=st<=0?"sem estoque":st<=Number(data.settings.lowStock||0)?"estoque baixo":"disponíveis";stockBadge.className="badge "+stockClass(st);stockNotice.textContent=st<=0?"⚠️ Estoque zerado. Registre uma produção antes de vender.":st<=Number(data.settings.lowStock||0)?`⚠️ Estoque baixo: restam ${st} garrafinha(s).`:"💜 Estoque calculado automaticamente: produção + estoque inicial − vendas.";saleStockInfo.textContent=`Estoque disponível agora: ${st} garrafinha(s)`;const defaultPriceNotice=document.getElementById("defaultPriceNotice");if(defaultPriceNotice)defaultPriceNotice.textContent=brl(data.settings.price);
  allRevenue.textContent=brl(businessRevenue(data.sales));allQty.textContent=totalSold();avgTicket.textContent=brl(data.sales.length?businessRevenue(data.sales)/data.sales.length:0);customerCount.textContent=new Set(data.sales.map(x=>x.customerName?.toLowerCase()).filter(Boolean)).size;
  const fs=filteredSales(),fr=businessRevenue(fs),fq=fs.reduce((a,x)=>a+x.qty,0),fp=salesProfit(fs);reportSummary.innerHTML=`<strong>${fs.length}</strong> pedido(s) • <strong>${fq}</strong> garrafinha(s) • <strong>${brl(fr)}</strong> faturados • <strong>${brl(fp)}</strong> de lucro estimado`;
  const saleHTML=data.sales.slice().reverse().slice(0,50).map(x=>{const names=(x.items||[]).map(i=>`${i.qty}x ${esc(i.name)}`).join(" • ");return `<div class="item"><div><strong>${esc(x.customerName||"")}</strong><small>${names}<br>${dateBR(x.date)} • ${x.payment?esc(x.payment):""}${x.delivery==="Entrega"?" • Entrega + R$ 5,00":""}</small></div><div style="text-align:right"><span class="badge green">${brl(x.total)}</span><div class="actions" style="margin-top:6px;justify-content:flex-end"><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editSale(${x.id})">✏️ Editar</button>${x.customerPhone?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="sendSaleWhatsApp(${x.id})">📲 WhatsApp</button>`:""}</div></div></div>`}).join("");salesList.innerHTML=saleHTML||`<div class="empty">Nenhum pedido registrado ainda. 💜</div>`;
@@ -327,8 +325,8 @@ function render(){
 }
 
 saleDate.value=today();
-customerNameEl().addEventListener("input",fillCustomerFromName);
-customerNameEl().addEventListener("change",fillCustomerFromName);
+const customerNameInput=customerNameEl();
+if(customerNameInput){customerNameInput.addEventListener("input",fillCustomerFromName);customerNameInput.addEventListener("change",fillCustomerFromName);customerNameInput.addEventListener("blur",fillCustomerFromName);}
 render();
 </script>
 </body>
