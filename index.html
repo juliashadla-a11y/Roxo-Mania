@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#6A1B9A"><title>Roxo Mania</title>
+<style>
+:root{--p:#6A1B9A;--p2:#45206B;--bg:#f7f4f8;--card:#fff;--txt:#302735;--muted:#7d7481;--green:#2e7d32;--red:#c62828}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--txt)}
+header{background:linear-gradient(135deg,var(--p),#8e44ad);color:#fff;padding:28px 20px 22px;border-radius:0 0 28px 28px;position:sticky;top:0;z-index:5}.brand{font-size:27px;font-weight:800}.sub{opacity:.86;font-size:13px;margin-top:4px}
+main{padding:18px 16px 100px;max-width:760px;margin:auto}h2{font-size:18px;margin:8px 2px 12px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.card{background:var(--card);border-radius:18px;padding:16px;box-shadow:0 4px 18px #32103a10}.label{font-size:12px;color:var(--muted)}.value{font-size:22px;font-weight:800;margin-top:5px}.green{color:var(--green)}
+button{border:0;border-radius:14px;padding:13px 15px;font-weight:700;font-size:15px}.primary{background:var(--p);color:#fff;width:100%;margin:14px 0}.secondary{background:#eee6f2;color:var(--p)}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e7e1e8;display:flex;justify-content:space-around;padding:8px 4px calc(8px + env(safe-area-inset-bottom));z-index:10}nav button{background:transparent;color:var(--muted);font-size:11px;padding:7px}.active{color:var(--p);font-weight:800}
+section{display:none}.show{display:block}form{background:#fff;padding:16px;border-radius:18px;box-shadow:0 4px 18px #32103a10}.field{margin-bottom:13px}label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}input,select{width:100%;padding:13px;border:1px solid #ddd4e1;border-radius:12px;font-size:16px;background:#fff}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.list{margin-top:14px}.item{background:#fff;border-radius:14px;padding:13px;margin:8px 0;display:flex;justify-content:space-between;gap:10px}.tiny{font-size:12px;color:var(--muted)}.danger{color:var(--red);background:#fff0f0}.notice{font-size:12px;color:var(--muted);line-height:1.45;margin-top:10px}.empty{text-align:center;color:var(--muted);padding:25px}.barbg{height:10px;background:#eee6f2;border-radius:99px;overflow:hidden}.bar{height:100%;background:var(--p);width:0}
+</style>
+</head>
+<body>
+<header><div class="brand">💜 Roxo Mania</div><div class="sub">Controle do seu açaí</div></header>
+<main>
+<section id="home" class="show">
+<h2>Resumo de hoje</h2>
+<div class="grid">
+<div class="card"><div class="label">Faturamento</div><div id="todayRevenue" class="value">R$ 0,00</div></div>
+<div class="card"><div class="label">Garrafinhas</div><div id="todayQty" class="value">0</div></div>
+<div class="card"><div class="label">Custo estimado</div><div id="todayCost" class="value">R$ 0,00</div></div>
+<div class="card"><div class="label">Lucro estimado</div><div id="todayProfit" class="value green">R$ 0,00</div></div>
+</div>
+<button class="primary" onclick="showTab('sell')">＋ Registrar venda</button>
+<h2>Capital de giro</h2>
+<div class="card"><div class="label">Meta: <span id="goalLabel"></span></div><div style="margin:10px 0" class="barbg"><div id="bar" class="bar"></div></div><div id="capText" class="tiny"></div></div>
+<h2>Preço atual</h2>
+<div class="card"><div class="label">Todos os sabores</div><div class="value">R$ 15,00</div><div class="notice">Preço único enquanto o Roxo Mania está começando.</div></div>
+</section>
+
+<section id="sell">
+<h2>Registrar venda</h2>
+<form onsubmit="addSale(event)">
+<div class="field"><label>Data</label><input id="date" type="date" required></div>
+<div class="field"><label>Sabor</label><select id="flavor"><option>Tradicional</option><option>Leitinho</option><option>Maracujá</option><option>Avelã</option><option>Morango</option></select></div>
+<div class="row"><div class="field"><label>Quantidade</label><input id="qty" type="number" min="1" value="1" required></div><div class="field"><label>Pagamento</label><select id="pay"><option>Pix</option><option>Dinheiro</option><option>Cartão</option><option>Transferência</option></select></div></div>
+<button class="primary" type="submit">Salvar venda</button>
+</form>
+<div class="notice">Preço de venda: R$ 15,00 para todos os sabores. Custo médio estimado atual: R$ 10,80 por garrafa, considerando o lote de 25 e os custos informados. Esse custo pode mudar quando confirmarmos o rendimento real dos cremes.</div>
+</section>
+
+<section id="sales"><h2>Vendas</h2><div id="salesList" class="list"></div><button class="danger" onclick="clearSales()">Apagar todas as vendas</button></section>
+
+<section id="cash">
+<h2>Caixa</h2>
+<form onsubmit="addCash(event)">
+<div class="row"><div class="field"><label>Tipo</label><select id="cashType"><option>Entrada</option><option>Saída</option></select></div><div class="field"><label>Valor</label><input id="cashValue" type="number" step="0.01" min="0" required></div></div>
+<div class="field"><label>Descrição</label><input id="cashDesc" placeholder="Ex.: compra de açaí" required></div>
+<button class="primary" type="submit">Salvar movimento</button>
+</form>
+<div class="grid" style="margin-top:12px"><div class="card"><div class="label">Entradas</div><div id="entries" class="value">R$ 0,00</div></div><div class="card"><div class="label">Saídas</div><div id="outs" class="value">R$ 0,00</div></div></div>
+<div id="cashList" class="list"></div>
+</section>
+
+<section id="production">
+<h2>Produção</h2>
+<div class="card"><div class="label">Lote padrão</div><div class="value">25 garrafinhas</div><div class="notice">5 Tradicionais • 5 Leitinho • 5 Maracujá • 5 Avelã • 5 Morango</div></div>
+<div class="grid" style="margin-top:12px"><div class="card"><div class="label">Custo estimado do lote</div><div id="batchCost" class="value">R$ 270,00</div></div><div class="card"><div class="label">Faturamento do lote</div><div class="value">R$ 375,00</div></div></div>
+<div class="card" style="margin-top:12px"><div class="label">Sobra estimada do lote</div><div class="value green">R$ 105,00</div><div class="notice">Antes de despesas fixas, taxas e possíveis perdas.</div></div>
+</section>
+
+<section id="settings">
+<h2>Configurações</h2>
+<form onsubmit="saveSettings(event)">
+<div class="field"><label>Preço de venda por garrafa</label><input id="price" type="number" step="0.01" min="0"></div>
+<div class="field"><label>Custo médio estimado por garrafa</label><input id="unitCost" type="number" step="0.01" min="0"></div>
+<div class="field"><label>Meta de capital de giro</label><input id="goal" type="number" step="0.01" min="0"></div>
+<div class="field"><label>Capital de giro atual</label><input id="currentCap" type="number" step="0.01" min="0"></div>
+<button class="primary" type="submit">Salvar configurações</button>
+</form>
+<div class="notice">Valores iniciais: preço R$ 15,00; custo médio R$ 10,80; meta de capital de giro R$ 500,00.</div>
+</section>
+</main>
+<nav>
+<button id="n-home" class="active" onclick="showTab('home')">🏠<br>Início</button>
+<button id="n-sell" onclick="showTab('sell')">➕<br>Venda</button>
+<button id="n-sales" onclick="showTab('sales')">📋<br>Vendas</button>
+<button id="n-production" onclick="showTab('production')">🥤<br>Produção</button>
+<button id="n-cash" onclick="showTab('cash')">💰<br>Caixa</button>
+</nav>
+<script>
+const KEY='roxoManiaAtualizadoV2';
+let data=JSON.parse(localStorage.getItem(KEY)||'null')||{sales:[],cash:[],settings:{price:15,unitCost:10.8,goal:500,currentCap:500}};
+const brl=v=>v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}), today=()=>new Date().toISOString().slice(0,10);
+function save(){localStorage.setItem(KEY,JSON.stringify(data));render()}
+function showTab(id){document.querySelectorAll('section').forEach(s=>s.classList.remove('show'));document.getElementById(id).classList.add('show');document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));document.getElementById('n-'+id).classList.add('active');render()}
+function addSale(e){e.preventDefault();data.sales.unshift({id:Date.now(),date:date.value,flavor:flavor.value,qty:+qty.value,pay:pay.value});save();alert('Venda registrada! 💜');showTab('sales')}
+function addCash(e){e.preventDefault();data.cash.unshift({id:Date.now(),type:cashType.value,value:+cashValue.value,desc:cashDesc.value,date:today()});save();e.target.reset();alert('Movimento salvo!')}
+function clearSales(){if(confirm('Apagar todas as vendas?')){data.sales=[];save()}}
+function saveSettings(e){e.preventDefault();data.settings={price:+price.value,unitCost:+unitCost.value,goal:+goal.value,currentCap:+currentCap.value};save();alert('Configurações salvas! 💜');showTab('home')}
+function render(){
+let t=today(),s=data.sales.filter(x=>x.date===t),rev=s.reduce((a,x)=>a+x.qty*data.settings.price,0),cost=s.reduce((a,x)=>a+x.qty*data.settings.unitCost,0);
+todayRevenue.textContent=brl(rev);todayQty.textContent=s.reduce((a,x)=>a+x.qty,0);todayCost.textContent=brl(cost);todayProfit.textContent=brl(rev-cost);
+goalLabel.textContent=brl(data.settings.goal);capText.textContent=brl(data.settings.currentCap)+' de '+brl(data.settings.goal);bar.style.width=Math.min(100,data.settings.currentCap/Math.max(1,data.settings.goal)*100)+'%';
+salesList.innerHTML=data.sales.length?data.sales.map(x=>`<div class="item"><div><b>${x.qty} × ${x.flavor}</b><div class="tiny">${x.date} • ${x.pay}</div></div><b>${brl(x.qty*data.settings.price)}</b></div>`).join(''):'<div class="empty">Nenhuma venda registrada.</div>';
+let en=data.cash.filter(x=>x.type==='Entrada').reduce((a,x)=>a+x.value,0),ou=data.cash.filter(x=>x.type==='Saída').reduce((a,x)=>a+x.value,0);entries.textContent=brl(en);outs.textContent=brl(ou);
+cashList.innerHTML=data.cash.length?data.cash.map(x=>`<div class="item"><div><b>${x.type}</b><div class="tiny">${x.date} • ${x.desc}</div></div><b>${brl(x.value)}</b></div>`).join(''):'<div class="empty">Nenhum movimento registrado.</div>';
+price.value=data.settings.price;unitCost.value=data.settings.unitCost;goal.value=data.settings.goal;currentCap.value=data.settings.currentCap;
+}
+date.value=today();render();
+</script></body></html>
