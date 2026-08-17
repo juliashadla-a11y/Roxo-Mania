@@ -448,7 +448,7 @@ function removeProduct(id){if(!confirm("Remover este produto do cadastro? As ven
 function clearSales(){if(!confirm("Apagar todas as vendas e as entradas automáticas de venda do Caixa?"))return;const ids=new Set(data.sales.map(x=>x.id));data.sales=[];data.cash=data.cash.filter(x=>!ids.has(x.saleId));save();render()}
 function periodStart(){const p=reportPeriod?.value||"today";if(p==="all")return null;const d=new Date();d.setDate(d.getDate()-(Number(p)-1));return d.toISOString().slice(0,10)}
 function filteredSales(){const start=periodStart();return start?data.sales.filter(x=>x.date>=start):data.sales}
-function exportBackup(){const blob=new Blob([JSON.stringify({version:19,exportedAt:new Date().toISOString(),data},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="roxo-mania-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function exportBackup(){const blob=new Blob([JSON.stringify({version:20,exportedAt:new Date().toISOString(),data},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="roxo-mania-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 function importBackup(e){const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const obj=JSON.parse(r.result);if(!obj.data||!Array.isArray(obj.data.sales)||!Array.isArray(obj.data.production)||!Array.isArray(obj.data.cash))throw Error();data=normalizeData(obj.data);save();render();alert("Backup importado com sucesso! 💜")}catch(err){alert("Não foi possível importar esse backup.")}e.target.value=""};r.readAsText(f)}
 function monthKey(d){return String(d||"").slice(0,7)}
 function salesProfit(list){return list.reduce((a,s)=>a+Number(s.subtotal??s.total??0)-Number(s.costTotal||s.items?.reduce((z,i)=>z+i.cost*i.qty,0)||0),0)}
@@ -585,78 +585,91 @@ function deleteCashDay(date){
 }
 
 
-function profitAdjustmentForDate(date){
-  const a=data.profitAdjustments||[];
-  const row=a.find(x=>x.date===date);
-  return row?Number(row.amount||0):0;
+function getProfitAdjustment(date){
+  const arr=data.profitAdjustments||[];
+  const item=arr.find(x=>x.date===date);
+  return item?Number(item.amount||0):0;
 }
-function editProfitAdjustment(date){
+function getProfitByDate(date){
+  const sales=(data.sales||[]).filter(s=>(s.date||"").slice(0,10)===date);
+  const revenue=sales.reduce((a,s)=>a+Number(s.total||0),0);
+  const costs=sales.reduce((a,s)=>a+Number(s.cost||s.totalCost||0),0);
+  const operationalExpenses=(data.cashEntries||data.movements||[]).filter(x=>
+    (x.date||"").slice(0,10)===date &&
+    String(x.type||x.kind||"").toLowerCase()==="saida" &&
+    !String(x.description||x.note||"").toLowerCase().includes("lucro")
+  ).reduce((a,x)=>a+Number(x.value||x.amount||0),0);
+  const calculated=revenue-costs-operationalExpenses;
+  const adjustment=getProfitAdjustment(date);
+  return {date,revenue,costs,operationalExpenses,calculated,adjustment,final:calculated+adjustment,sales:sales.length};
+}
+function getProfitDates(month){
+  const dates=new Set();
+  (data.sales||[]).forEach(s=>{const d=(s.date||"").slice(0,10);if(d.startsWith(month))dates.add(d)});
+  (data.cashEntries||data.movements||[]).forEach(x=>{const d=(x.date||"").slice(0,10);if(d.startsWith(month))dates.add(d)});
+  (data.profitAdjustments||[]).forEach(x=>{const d=(x.date||"").slice(0,10);if(d.startsWith(month))dates.add(d)});
+  return [...dates].sort();
+}
+function editProfitDay(date){
   data.profitAdjustments=data.profitAdjustments||[];
-  const current=profitAdjustmentForDate(date);
-  const raw=prompt("Ajuste manual do lucro deste dia. Use valor positivo para acrescentar e negativo para reduzir:", Number(current).toFixed(2));
+  const current=getProfitAdjustment(date);
+  const raw=prompt("Ajuste manual do lucro de "+dateBR(date)+".\nUse positivo para aumentar ou negativo para reduzir:",Number(current).toFixed(2));
   if(raw===null)return;
   const amount=moneyInput(raw);
-  if(!Number.isFinite(amount)){alert("Informe um valor válido. Ex.: 20 ou -20.");return}
-  const idx=data.profitAdjustments.findIndex(x=>x.date===date);
+  if(!Number.isFinite(amount)){alert("Digite um valor válido, como 20 ou -20.");return}
+  const i=data.profitAdjustments.findIndex(x=>x.date===date);
   if(Math.abs(amount)<0.000001){
-    if(idx>=0)data.profitAdjustments.splice(idx,1);
-  }else if(idx>=0){
-    data.profitAdjustments[idx].amount=amount;
-    data.profitAdjustments[idx].updatedAt=new Date().toISOString();
+    if(i>=0)data.profitAdjustments.splice(i,1);
+  }else if(i>=0){
+    data.profitAdjustments[i].amount=amount;
   }else{
-    data.profitAdjustments.push({id:Date.now(),date,amount,updatedAt:new Date().toISOString()});
+    data.profitAdjustments.push({id:Date.now(),date,amount});
   }
-  save();renderProfitDashboard();alert("Ajuste do lucro atualizado! 💜");
+  save();render();renderProfitDashboard();
 }
 function deleteProfitAdjustment(date){
   data.profitAdjustments=data.profitAdjustments||[];
-  const idx=data.profitAdjustments.findIndex(x=>x.date===date);
-  if(idx<0)return;
-  if(!confirm("Apagar o ajuste manual deste dia? O lucro calculado pelas vendas será mantido."))return;
-  data.profitAdjustments.splice(idx,1);
-  save();renderProfitDashboard();alert("Ajuste apagado.");
+  const i=data.profitAdjustments.findIndex(x=>x.date===date);
+  if(i<0)return;
+  if(!confirm("Apagar somente o ajuste manual deste dia?"))return;
+  data.profitAdjustments.splice(i,1);
+  save();render();renderProfitDashboard();
 }
-function profitForDateWithAdjustment(date){
-  return profitForDate(date)+profitAdjustmentForDate(date);
+function viewProfitDay(date){
+  const r=getProfitByDate(date);
+  alert("Resumo de "+dateBR(date)+
+    "\n\nFaturamento: "+brl(r.revenue)+
+    "\nCustos: "+brl(r.costs)+
+    "\nSaídas operacionais: "+brl(r.operationalExpenses)+
+    "\nLucro calculado: "+brl(r.calculated)+
+    "\nAjuste manual: "+brl(r.adjustment)+
+    "\nLucro final: "+brl(r.final)+
+    "\nVendas: "+r.sales);
 }
 function renderProfitDashboard(){
-  const monthInput=document.getElementById("profitMonth");
+  const monthEl=document.getElementById("profitMonth");
   const totalEl=document.getElementById("profitMonthTotal");
   const listEl=document.getElementById("profitDaysList");
-  if(!monthInput||!totalEl||!listEl)return;
-  const month=monthInput.value || new Date().toISOString().slice(0,7);
-  const rows=monthProfitSummary(month).map(r=>({
-    date:r.date,
-    calculated:r.profit,
-    adjustment:profitAdjustmentForDate(r.date),
-    final:r.profit+profitAdjustmentForDate(r.date)
-  }));
-  const total=rows.reduce((a,r)=>a+r.final,0);
-  const calculatedTotal=rows.reduce((a,r)=>a+r.calculated,0);
-  const adjustmentTotal=rows.reduce((a,r)=>a+r.adjustment,0);
-  totalEl.innerHTML=`<div style="display:grid;gap:5px"><strong style="font-size:22px">Lucro final do mês: ${brl(total)}</strong><span class="mini">Calculado pelas vendas: ${brl(calculatedTotal)} • Ajustes: ${brl(adjustmentTotal)}</span></div>`;
+  if(!monthEl||!totalEl||!listEl)return;
+  const month=monthEl.value||new Date().toISOString().slice(0,7);
+  const rows=getProfitDates(month).map(getProfitByDate);
+  const calculated=rows.reduce((a,r)=>a+r.calculated,0);
+  const adjustments=rows.reduce((a,r)=>a+r.adjustment,0);
+  const final=rows.reduce((a,r)=>a+r.final,0);
+  totalEl.innerHTML="<strong style='font-size:22px'>Lucro final: "+brl(final)+"</strong><div class='mini'>Calculado: "+brl(calculated)+" • Ajustes: "+brl(adjustments)+"</div>";
   if(!rows.length){
-    listEl.innerHTML='<div class="mini" style="margin-top:12px">Nenhum movimento registrado neste mês.</div>';
+    listEl.innerHTML="<div class='empty'>Nenhum movimento registrado neste mês.</div>";
     return;
   }
   listEl.innerHTML=rows.map(r=>`<div class="item" style="margin-top:10px">
-    <div><strong>${dateBR(r.date)}</strong><small>Calculado: ${brl(r.calculated)}${Math.abs(r.adjustment)>0.000001?" • Ajuste: "+brl(r.adjustment):""} • Final: ${brl(r.final)}</small></div>
+    <div><strong>${dateBR(r.date)}</strong><small>Calculado: ${brl(r.calculated)}${Math.abs(r.adjustment)>0.000001?" • Ajuste: "+brl(r.adjustment):""}</small></div>
     <div class="actions">
       <strong>${brl(r.final)}</strong>
-      <button class="secondary" style="padding:7px 10px" onclick="showProfitDay('${r.date}')">🔎 Ver dia</button>
-      <button class="secondary" style="padding:7px 10px" onclick="editProfitAdjustment('${r.date}')">✏️ Editar</button>
-      ${Math.abs(r.adjustment)>0.000001?`<button class="danger" style="padding:7px 10px" onclick="deleteProfitAdjustment('${r.date}')">🗑️ Apagar ajuste</button>`:""}
+      <button class="secondary" style="padding:6px 8px;font-size:11px" onclick="viewProfitDay('${r.date}')">🔎 Ver dia</button>
+      <button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editProfitDay('${r.date}')">✏️ Editar</button>
+      ${Math.abs(r.adjustment)>0.000001?`<button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteProfitAdjustment('${r.date}')">🗑️ Apagar ajuste</button>`:""}
     </div>
   </div>`).join("");
-}
-function showProfitDay(date){
-  const calculated=profitForDate(date);
-  const adjustment=profitAdjustmentForDate(date);
-  const final=calculated+adjustment;
-  const sales=(data.sales||[]).filter(s=>(s.date||s.createdAt||"").slice(0,10)===date);
-  const revenue=sales.reduce((a,s)=>a+Number(s.total||s.amount||0),0);
-  const costs=sales.reduce((a,s)=>a+Number(s.cost||s.totalCost||0),0);
-  alert(`Resumo de ${dateBR(date)}\\n\\nFaturamento: ${brl(revenue)}\\nCustos: ${brl(costs)}\\nLucro calculado: ${brl(calculated)}\\nAjuste manual: ${brl(adjustment)}\\nLucro final: ${brl(final)}\\nVendas: ${sales.length}`);
 }
 
 function render(){
@@ -717,16 +730,16 @@ render();
 </section>
 <script>
 (function(){
-  window.renderProfitDashboard = renderProfitDashboard;
-  function initProfitDashboard(){
-    const monthInput=document.getElementById("profitMonth");
-    if(!monthInput)return;
-    if(!monthInput.value) monthInput.value=new Date().toISOString().slice(0,7);
-    monthInput.addEventListener("change",renderProfitDashboard);
+  window.renderProfitDashboard=renderProfitDashboard;
+  function init(){
+    const el=document.getElementById("profitMonth");
+    if(!el)return;
+    if(!el.value)el.value=new Date().toISOString().slice(0,7);
+    el.onchange=renderProfitDashboard;
     renderProfitDashboard();
   }
-  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",initProfitDashboard);
-  else initProfitDashboard();
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init);
+  else init();
 })();
 </script>
 
