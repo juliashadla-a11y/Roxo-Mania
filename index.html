@@ -341,14 +341,14 @@ function updateOrderTotal(){const items=orderItemsFromForm(),subtotal=items.redu
 function whatsappMessage(s){const lines=["💜 *Roxo Mania*","",`Olá, ${s.customerName}! Seu pedido foi registrado com sucesso. 🥤`,"","🧾 *Detalhes do pedido:*",...s.items.map(i=>`• ${i.qty}x ${i.name} — ${brl(i.total)}`),"",`💰 *Subtotal: ${brl(s.subtotal??s.total)}*`,s.deliveryFee?`🛵 *Taxa de entrega: ${brl(s.deliveryFee)}*`:"",`💰 *Total: ${brl(s.total)}*`,`• Pagamento: ${s.payment}`,`• ${s.delivery}${s.address?": "+s.address:""}`,s.note?`• Observação: ${s.note}`:"","",`📅 Data: ${dateBR(s.date)}`,"","Muito mais que açaí. Uma experiência. 💜"];return lines.filter(Boolean).join("\n")}
 function totalProduced(){return data.production.reduce((a,x)=>a+Number(x.qty||0),0)}
 function itemConsumesBottle(i){
-  const linePrice=Number(i?.price);
   const p=productById(i?.productId);
+  const linePrice=Number(i?.price);
   const text=((p?.name||"")+" "+(p?.category||"")+" "+(i?.name||"")).toLowerCase();
 
-  // ADD-ON RULE: the actual line price is authoritative. Add-ons/creams in
-  // this business are sold as low-value extras and must never consume a bottle.
+  // Add-ons/extras/creams never consume a bottle.
+  if(/adicional|extra|complemento|cobertura|paçoca|pacoca|creme/.test(text)) return false;
+  // Existing add-ons are low-priced; the sale-line price overrides any old flag.
   if(Number.isFinite(linePrice) && linePrice>0 && linePrice<10) return false;
-  if(/adicional|extra|complemento|cobertura|paçoca|pacoca/.test(text)) return false;
 
   if(p) return inferStockItem(p);
   if(typeof i?.stockItem==="boolean") return i.stockItem;
@@ -372,6 +372,19 @@ function stock(){
   return Number(data.settings.initialStock||0)+totalProduced()-totalSold()-totalStockWithdrawals();
 }
 function stockClass(v){return v<=0?"stock-out":v<=Number(data.settings.lowStock||0)?"stock-low":"stock-ok"}
+
+function deleteSale(id){
+  const sale=data.sales.find(x=>x.id===id);
+  if(!sale){alert("Venda não encontrada.");return;}
+  const ok=confirm(`Apagar a venda de ${sale.customerName||"cliente"} no valor de ${brl(Number(sale.total||0))}?\\n\\nEssa ação removerá somente esta venda dos registros.`);
+  if(!ok) return;
+
+  data.sales=data.sales.filter(x=>x.id!==id);
+  save();
+  renderAll();
+  alert("Venda apagada com sucesso! 🗑️");
+}
+
 function addSale(e){
  e.preventDefault();
  const items=orderItemsFromForm(),date=saleDate.value,customerName=customerNameEl().value.trim(),customerPhone=customerPhoneEl().value.trim(),payment=paymentMethod.value,delivery=deliveryMethod.value,address=customerAddress.value.trim(),note=saleNote.value.trim(),whatsapp=normalizeWhatsApp(customerPhone);
@@ -635,7 +648,7 @@ function reportMonths(){const set=new Set([today().slice(0,7)]);data.sales.forEa
 function monthLabel(m){if(m==="all")return "Todo o período";const [y,mo]=m.split("-").map(Number);return new Date(y,mo-1,1).toLocaleDateString("pt-BR",{month:"long",year:"numeric"}).replace(/^./,c=>c.toUpperCase())}
 function selectedReportMonth(){const el=document.getElementById("reportMonth");return el?.value||today().slice(0,7)}
 function filteredSales(){const m=selectedReportMonth();return m==="all"?data.sales.slice():data.sales.filter(x=>monthKey(x.date)===m)}
-function exportBackup(){const blob=new Blob([JSON.stringify({version:30,exportedAt:new Date().toISOString(),data},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="roxo-mania-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function exportBackup(){const blob=new Blob([JSON.stringify({version:31,exportedAt:new Date().toISOString(),data},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="roxo-mania-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 function importBackup(e){const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const obj=JSON.parse(r.result);if(!obj.data||!Array.isArray(obj.data.sales)||!Array.isArray(obj.data.production)||!Array.isArray(obj.data.cash))throw Error();data=normalizeData(obj.data);save();render();alert("Backup importado com sucesso! 💜")}catch(err){alert("Não foi possível importar esse backup.")}e.target.value=""};r.readAsText(f)}
 function monthKey(d){return String(d||"").slice(0,7)}
 function salesProfit(list){return list.reduce((a,s)=>a+Number(s.subtotal??s.total??0)-Number(s.costTotal||s.items?.reduce((z,i)=>z+i.cost*i.qty,0)||0),0)}
