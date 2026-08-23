@@ -220,11 +220,50 @@ function migrateHistoricalStockOnly(){
   }))}));
 }
 
+
+function migrateInitialStockToProduction(){
+  // V27: moves the original 25-bottle starting stock into Production.
+  // This changes ONLY inventory/production bookkeeping. No sales, prices,
+  // costs, profit, cash or financial entries are modified.
+  if(data.settings?.v27InitialStockMoved) return;
+  const initial=Number(data.settings?.initialStock||0);
+  if(initial===25){
+    const existingTotal=(data.production||[]).reduce((a,x)=>a+Number(x.qty||0),0);
+    const dates=(data.production||[]).map(x=>x.date).filter(Boolean);
+    const firstDate=dates.length?dates.slice().sort()[0]:today();
+    data.production.unshift({
+      id:"v27-initial-25-"+Date.now(),
+      date:firstDate,
+      qty:25,
+      note:"1ª produção — transferida do estoque inicial"
+    });
+    data.settings.initialStock=0;
+
+    // The current Roxo Mania record shows 80 units in Production while the
+    // user-defined four 5 L batches total 100. After moving the 25 initial
+    // units, reduce the excess 5 from the latest production record so the
+    // production history closes at 100. This is inventory-only.
+    const afterMove=existingTotal+25;
+    if(afterMove===105 && data.production.length>1){
+      let remaining=5;
+      for(let i=1;i<data.production.length && remaining>0;i++){
+        const item=data.production[i];
+        const q=Number(item.qty||0);
+        const cut=Math.min(q,remaining);
+        item.qty=q-cut;
+        remaining-=cut;
+      }
+      data.production=data.production.filter(x=>Number(x.qty||0)>0);
+    }
+  }
+  data.settings.v27InitialStockMoved=true;
+}
+
 function loadData(){
   for(const k of [KEY,...OLD_KEYS]){try{const raw=JSON.parse(localStorage.getItem(k));if(raw){const migrated=normalizeData(raw);if(!("initialStock" in (raw.settings||{}))){const sold=migrated.sales.reduce((a,x)=>a+Number(x.qty||x.items?.reduce((z,i)=>z+i.qty,0)||0),0);const produced=(migrated.production||[]).reduce((a,x)=>a+Number(x.qty||0),0);migrated.settings.initialStock=Math.max(0,sold-produced)}return migrated}}catch(e){}}
   return normalizeData(structuredClone(defaults));
 }
-let data=loadData();migrateHistoricalStockOnly();save();
+let data=loadData();migrateHistoricalStockOnly();migrateInitialStockToProduction();save();
 repairSaleCashEntries();
 let editingSaleId=null;
 let editingProductId=null;
@@ -541,7 +580,7 @@ function reportMonths(){const set=new Set([today().slice(0,7)]);data.sales.forEa
 function monthLabel(m){if(m==="all")return "Todo o período";const [y,mo]=m.split("-").map(Number);return new Date(y,mo-1,1).toLocaleDateString("pt-BR",{month:"long",year:"numeric"}).replace(/^./,c=>c.toUpperCase())}
 function selectedReportMonth(){const el=document.getElementById("reportMonth");return el?.value||today().slice(0,7)}
 function filteredSales(){const m=selectedReportMonth();return m==="all"?data.sales.slice():data.sales.filter(x=>monthKey(x.date)===m)}
-function exportBackup(){const blob=new Blob([JSON.stringify({version:26,exportedAt:new Date().toISOString(),data},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="roxo-mania-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function exportBackup(){const blob=new Blob([JSON.stringify({version:27,exportedAt:new Date().toISOString(),data},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="roxo-mania-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 function importBackup(e){const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const obj=JSON.parse(r.result);if(!obj.data||!Array.isArray(obj.data.sales)||!Array.isArray(obj.data.production)||!Array.isArray(obj.data.cash))throw Error();data=normalizeData(obj.data);save();render();alert("Backup importado com sucesso! 💜")}catch(err){alert("Não foi possível importar esse backup.")}e.target.value=""};r.readAsText(f)}
 function monthKey(d){return String(d||"").slice(0,7)}
 function salesProfit(list){return list.reduce((a,s)=>a+Number(s.subtotal??s.total??0)-Number(s.costTotal||s.items?.reduce((z,i)=>z+i.cost*i.qty,0)||0),0)}
