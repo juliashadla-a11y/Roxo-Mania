@@ -128,7 +128,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 
 <section id="products">
 <h2>🛍️ Produtos</h2>
-<div class="card"><form onsubmit="saveProduct(event)"><div class="field"><label>Nome do produto</label><input id="productName" type="text" placeholder="Ex.: Açaí tradicional" required></div><div class="row"><div class="field"><label>Preço de venda</label><input id="productPrice" type="number" min="0" step=".01" required></div><div class="field"><label>Custo estimado</label><input id="productCost" type="number" min="0" step=".01" required></div></div><div class="field"><label>Categoria</label><input id="productCategory" type="text" placeholder="Ex.: Açaí"></div><div class="actions"><button id="productSubmitBtn" class="primary" type="submit">➕ Cadastrar produto</button><button id="cancelProductEditBtn" class="secondary" type="button" onclick="cancelProductEdit()" style="display:none">Cancelar edição</button></div></form></div>
+<div class="card"><form onsubmit="saveProduct(event)"><div class="field"><label>Nome do produto</label><input id="productName" type="text" placeholder="Ex.: Açaí tradicional" required></div><div class="row"><div class="field"><label>Preço de venda</label><input id="productPrice" type="number" min="0" step=".01" required></div><div class="field"><label>Custo estimado</label><input id="productCost" type="number" min="0" step=".01" required></div></div><div class="field"><label>Categoria</label><input id="productCategory" type="text" placeholder="Ex.: Açaí"></div><div class="field"><label>Tipo de estoque</label><select id="productStockItem"><option value="bottle">Garrafinha de açaí — desconta 1 garrafinha do estoque</option><option value="additional">Adicional/creme — NÃO desconta garrafinha</option></select></div><div class="actions"><button id="productSubmitBtn" class="primary" type="submit">➕ Cadastrar produto</button><button id="cancelProductEditBtn" class="secondary" type="button" onclick="cancelProductEdit()" style="display:none">Cancelar edição</button></div></form></div>
 <div style="height:14px"></div><div class="card"><h3 style="margin-bottom:12px">Produtos cadastrados</h3><div id="productsList" class="list"></div></div>
 <div class="notice">💜 Produtos novos ficam disponíveis imediatamente na tela de venda.</div>
 </section>
@@ -166,16 +166,25 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 const KEY="roxoManiaAtualizadoV6";
 const OLD_KEYS=["roxoManiaAtualizadoV8","roxoManiaAtualizadoV7","roxoManiaAtualizadoV5","roxoManiaAtualizadoV4","roxoManiaAtualizadoV3"];
 const defaultProducts=[
- {id:"tradicional",name:"Tradicional",price:15,cost:8.48,category:"Açaí",active:true},
- {id:"leitinho",name:"Creme de leitinho",price:15,cost:11.48,category:"Açaí",active:true},
- {id:"maracuja",name:"Creme de maracujá",price:15,cost:10.58,category:"Açaí",active:true},
- {id:"avelã",name:"Creme de avelã",price:15,cost:12.48,category:"Açaí",active:true},
- {id:"morango",name:"Creme de morango",price:15,cost:10.98,category:"Açaí",active:true}
+ {id:"tradicional",name:"Tradicional",price:15,cost:8.48,category:"Açaí",stockItem:true,active:true},
+ {id:"leitinho",name:"Creme de leitinho",price:15,cost:11.48,category:"Açaí",stockItem:true,active:true},
+ {id:"maracuja",name:"Creme de maracujá",price:15,cost:10.58,category:"Açaí",stockItem:true,active:true},
+ {id:"avelã",name:"Creme de avelã",price:15,cost:12.48,category:"Açaí",stockItem:true,active:true},
+ {id:"morango",name:"Creme de morango",price:15,cost:10.98,category:"Açaí",stockItem:true,active:true}
 ];
 const defaults={sales:[],cash:[],cashDays:{},production:[],stockWithdrawals:[],profitAdjustments:[],products:defaultProducts,clients:[],workingCapitalMovements:[],settings:{price:15,cost:10,goal:300,initialStock:0,lowStock:5,workingCapitalGoal:500,workingCapitalBalance:0}};
+
+function inferStockItem(p){
+  if(typeof p.stockItem==="boolean") return p.stockItem;
+  const c=String(p.category||"").toLowerCase();
+  const n=String(p.name||"").toLowerCase();
+  return !(c.includes("adicional")||c.includes("extra")||c.includes("complement")||n.includes("adicional")||n.includes("extra"));
+}
+function productConsumesBottle(p){return !!p && inferStockItem(p);}
+
 function normalizeData(base){
   const out={...defaults,...base,settings:{...defaults.settings,...(base.settings||{})}};
-  out.products=Array.isArray(base.products)&&base.products.length?base.products:structuredClone(defaultProducts);
+  out.products=(Array.isArray(base.products)&&base.products.length?base.products:structuredClone(defaultProducts)).map(p=>({...p,stockItem:inferStockItem(p)}));
   out.clients=Array.isArray(base.clients)?base.clients:[];
   out.cashDays=base.cashDays&&typeof base.cashDays==="object"?base.cashDays:{};
   out.stockWithdrawals=Array.isArray(base.stockWithdrawals)?base.stockWithdrawals:[];
@@ -190,15 +199,32 @@ function normalizeData(base){
     const total=s.total!=null?Number(s.total):subtotal+deliveryFee;
     const qty=Number(s.qty||items.reduce((a,i)=>a+Number(i.qty||0),0));
     const costTotal=s.costTotal!=null?Number(s.costTotal):items.reduce((a,i)=>a+Number(i.cost||0)*Number(i.qty||0),0);
-    return {...s,items,qty,subtotal,deliveryFee,total,costTotal};
+    return {...s,items:items.map(i=>{
+      const p=out.products.find(x=>x.id===i.productId);
+      const inferred = typeof i.stockItem==="boolean"
+        ? i.stockItem
+        : (p ? productConsumesBottle(p) : !/adicional|extra|creme|cobertura|paçoca|pacoca/i.test(String(i.name||"")));
+      return {...i,stockItem:inferred};
+    }),qty,subtotal,deliveryFee,total,costTotal};
   });
   return out;
 }
+
+function migrateHistoricalStockOnly(){
+  // This migration deliberately changes no sale financial fields.
+  // It only ensures historical items have a stockItem flag so stock is recalculated
+  // correctly: additions/creams do not consume bottles.
+  data.sales=(data.sales||[]).map(s=>({...s,items:(s.items||[]).map(i=>({
+    ...i,
+    stockItem:itemConsumesBottle(i)
+  }))}));
+}
+
 function loadData(){
   for(const k of [KEY,...OLD_KEYS]){try{const raw=JSON.parse(localStorage.getItem(k));if(raw){const migrated=normalizeData(raw);if(!("initialStock" in (raw.settings||{}))){const sold=migrated.sales.reduce((a,x)=>a+Number(x.qty||x.items?.reduce((z,i)=>z+i.qty,0)||0),0);const produced=(migrated.production||[]).reduce((a,x)=>a+Number(x.qty||0),0);migrated.settings.initialStock=Math.max(0,sold-produced)}return migrated}}catch(e){}}
   return normalizeData(structuredClone(defaults));
 }
-let data=loadData();
+let data=loadData();migrateHistoricalStockOnly();save();
 repairSaleCashEntries();
 let editingSaleId=null;
 let editingProductId=null;
@@ -232,14 +258,24 @@ function normalizeWhatsApp(phone){let d=String(phone||"").replace(/\D/g,"");if(d
 function productById(id){return data.products.find(p=>p.id===id)}
 function activeProducts(){return data.products.filter(p=>p.active!==false)}
 function addOrderItem(productId="",qty=1){const wrap=document.getElementById("orderItems");const row=document.createElement("div");row.className="order-row";row.innerHTML=`<select class="order-product" required><option value="">Sabor/produto</option>${activeProducts().map(p=>`<option value="${esc(p.id)}" ${p.id===productId?"selected":""}>${esc(p.name)} — ${brl(p.price)}</option>`).join("")}</select><input class="order-qty" type="number" min="1" value="${qty}" required><input class="order-price" type="number" min="0" step=".01" value="0" required><button type="button" class="remove" onclick="this.parentElement.remove();updateOrderTotal()">×</button>`;wrap.appendChild(row);const sel=row.querySelector(".order-product"),price=row.querySelector(".order-price");sel.addEventListener("change",()=>{const p=productById(sel.value);price.value=p?p.price:0;updateOrderTotal()});row.querySelector(".order-qty").addEventListener("input",updateOrderTotal);price.addEventListener("input",updateOrderTotal);document.getElementById("deliveryMethod")?.addEventListener("change",updateOrderTotal);if(productId){const p=productById(productId);price.value=p?p.price:0}updateOrderTotal()}
-function orderItemsFromForm(){return [...document.querySelectorAll(".order-row")].map(r=>{const id=r.querySelector(".order-product").value,p=productById(id),qty=Number(r.querySelector(".order-qty").value),price=Number(r.querySelector(".order-price").value);return p&&qty>0?{productId:id,name:p.name,qty,price,cost:Number(p.cost||0),total:qty*price}:null}).filter(Boolean)}
+function orderItemsFromForm(){return [...document.querySelectorAll(".order-row")].map(r=>{const id=r.querySelector(".order-product").value,p=productById(id),qty=Number(r.querySelector(".order-qty").value),price=Number(r.querySelector(".order-price").value);return p&&qty>0?{productId:id,name:p.name,qty,price,cost:Number(p.cost||0),stockItem:productConsumesBottle(p),total:qty*price}:null}).filter(Boolean)}
 const DELIVERY_FEE=3;
 function getDeliveryFee(){const v=document.getElementById("deliveryMethod")?.value;return v==="Entrega"?DELIVERY_FEE:0}
 function updateOrderTotal(){const items=orderItemsFromForm(),subtotal=items.reduce((a,i)=>a+i.total,0),fee=getDeliveryFee(),total=subtotal+fee;document.getElementById("orderTotal").textContent=brl(total);const feeInfo=document.getElementById("deliveryFeeInfo");if(feeInfo)feeInfo.textContent=`Taxa de entrega: ${brl(fee)}`;const qty=items.reduce((a,i)=>a+i.qty,0);document.getElementById("saleStockInfo").textContent=`Estoque disponível agora: ${stock()} garrafinha(s) • Este pedido: ${qty} unidade(s)`}
 
 function whatsappMessage(s){const lines=["💜 *Roxo Mania*","",`Olá, ${s.customerName}! Seu pedido foi registrado com sucesso. 🥤`,"","🧾 *Detalhes do pedido:*",...s.items.map(i=>`• ${i.qty}x ${i.name} — ${brl(i.total)}`),"",`💰 *Subtotal: ${brl(s.subtotal??s.total)}*`,s.deliveryFee?`🛵 *Taxa de entrega: ${brl(s.deliveryFee)}*`:"",`💰 *Total: ${brl(s.total)}*`,`• Pagamento: ${s.payment}`,`• ${s.delivery}${s.address?": "+s.address:""}`,s.note?`• Observação: ${s.note}`:"","",`📅 Data: ${dateBR(s.date)}`,"","Muito mais que açaí. Uma experiência. 💜"];return lines.filter(Boolean).join("\n")}
 function totalProduced(){return data.production.reduce((a,x)=>a+Number(x.qty||0),0)}
-function totalSold(){return data.sales.reduce((a,x)=>a+Number(x.qty||x.items?.reduce((z,i)=>z+i.qty,0)||0),0)}
+function itemConsumesBottle(i){
+  if(typeof i.stockItem==="boolean") return i.stockItem;
+  const p=productById(i.productId);
+  if(p) return productConsumesBottle(p);
+  const n=String(i.name||"").toLowerCase();
+  return !(n.includes("adicional")||n.includes("extra")||n.includes("creme")||n.includes("cobertura")||n.includes("paçoca")||n.includes("pacoca"));
+}
+function totalSold(){
+ return data.sales.reduce((a,s)=>a+(s.items||[]).reduce((z,i)=>
+   z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0);
+}
 function totalStockWithdrawals(){return data.stockWithdrawals.reduce((a,x)=>a+Number(x.qty||0),0)}
 function stock(){return Number(data.settings.initialStock||0)+totalProduced()-totalSold()-totalStockWithdrawals()}
 function stockClass(v){return v<=0?"stock-out":v<=Number(data.settings.lowStock||0)?"stock-low":"stock-ok"}
@@ -495,8 +531,8 @@ function deleteProduction(id){
   data.production=data.production.filter(x=>x.id!==id);save();render();alert("Produção excluída. 📦");
 }
 function saveSettings(e){e.preventDefault();data.settings.price=Number(settingPrice.value)||0;data.settings.cost=Number(settingCost.value)||10;data.settings.goal=Number(settingGoal.value)||0;data.settings.initialStock=Math.max(0,Number(settingInitialStock.value)||0);data.settings.lowStock=Math.max(0,Number(settingLowStock.value)||0);data.settings.workingCapitalGoal=Math.max(0,Number(settingWorkingCapitalGoal.value)||0);data.settings.workingCapitalBalance=Math.max(0,Number(data.settings.workingCapitalBalance)||0);save();render();alert("Configurações salvas! ⚙️")}
-function saveProduct(e){e.preventDefault();const name=productName.value.trim(),price=Number(productPrice.value),cost=Number(productCost.value),category=productCategory.value.trim()||"Açaí";if(!name||price<0||cost<0)return;if(editingProductId){const p=productById(editingProductId);if(!p)return;p.name=name;p.price=price;p.cost=cost;p.category=category;alert("Produto atualizado! 🛍️")}else{data.products.push({id:"p"+Date.now(),name,price,cost,category,active:true});alert("Produto cadastrado! 🛍️")}save();cancelProductEdit();render()}
-function editProduct(id){const p=productById(id);if(!p)return;editingProductId=id;productName.value=p.name;productPrice.value=p.price;productCost.value=p.cost;productCategory.value=p.category||"Açaí";productSubmitBtn.textContent="💾 Salvar alterações";cancelProductEditBtn.style.display="block";showTab("products");setTimeout(()=>document.getElementById("productName")?.scrollIntoView({behavior:"smooth",block:"center"}),50)}
+function saveProduct(e){e.preventDefault();const name=productName.value.trim(),price=Number(productPrice.value),cost=Number(productCost.value),category=productCategory.value.trim()||"Açaí",stockItem=productStockItem.value==="bottle";if(!name||price<0||cost<0)return;if(editingProductId){const p=productById(editingProductId);if(!p)return;p.name=name;p.price=price;p.cost=cost;p.category=category;p.stockItem=stockItem;alert("Produto atualizado! 🛍️")}else{data.products.push({id:"p"+Date.now(),name,price,cost,category,stockItem,active:true});alert("Produto cadastrado! 🛍️")}save();cancelProductEdit();render()}
+function editProduct(id){const p=productById(id);if(!p)return;editingProductId=id;productName.value=p.name;productPrice.value=p.price;productCost.value=p.cost;productCategory.value=p.category||"Açaí";productStockItem.value=productConsumesBottle(p)?"bottle":"additional";productSubmitBtn.textContent="💾 Salvar alterações";cancelProductEditBtn.style.display="block";showTab("products");setTimeout(()=>document.getElementById("productName")?.scrollIntoView({behavior:"smooth",block:"center"}),50)}
 function cancelProductEdit(){editingProductId=null;const f=document.querySelector('#products form');if(f)f.reset();const btn=document.getElementById("productSubmitBtn");const cancel=document.getElementById("cancelProductEditBtn");if(btn)btn.textContent="➕ Cadastrar produto";if(cancel)cancel.style.display="none"}
 function toggleProduct(id){const p=productById(id);if(!p)return;p.active=p.active===false;save();render()}
 function removeProduct(id){if(!confirm("Remover este produto do cadastro? As vendas antigas serão preservadas."))return;data.products=data.products.filter(p=>p.id!==id);save();render()}
@@ -505,7 +541,7 @@ function reportMonths(){const set=new Set([today().slice(0,7)]);data.sales.forEa
 function monthLabel(m){if(m==="all")return "Todo o período";const [y,mo]=m.split("-").map(Number);return new Date(y,mo-1,1).toLocaleDateString("pt-BR",{month:"long",year:"numeric"}).replace(/^./,c=>c.toUpperCase())}
 function selectedReportMonth(){const el=document.getElementById("reportMonth");return el?.value||today().slice(0,7)}
 function filteredSales(){const m=selectedReportMonth();return m==="all"?data.sales.slice():data.sales.filter(x=>monthKey(x.date)===m)}
-function exportBackup(){const blob=new Blob([JSON.stringify({version:24,exportedAt:new Date().toISOString(),data},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="roxo-mania-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function exportBackup(){const blob=new Blob([JSON.stringify({version:26,exportedAt:new Date().toISOString(),data},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="roxo-mania-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 function importBackup(e){const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const obj=JSON.parse(r.result);if(!obj.data||!Array.isArray(obj.data.sales)||!Array.isArray(obj.data.production)||!Array.isArray(obj.data.cash))throw Error();data=normalizeData(obj.data);save();render();alert("Backup importado com sucesso! 💜")}catch(err){alert("Não foi possível importar esse backup.")}e.target.value=""};r.readAsText(f)}
 function monthKey(d){return String(d||"").slice(0,7)}
 function salesProfit(list){return list.reduce((a,s)=>a+Number(s.subtotal??s.total??0)-Number(s.costTotal||s.items?.reduce((z,i)=>z+i.cost*i.qty,0)||0),0)}
@@ -759,7 +795,7 @@ if(editableCashHistory) editableCashHistory.innerHTML=cashDaysHTML || '<div clas
  if(wch){const hist=(data.workingCapitalMovements||[]).slice().reverse().slice(0,30);wch.innerHTML=hist.length?hist.map(x=>`<div class="item"><div><strong>${x.kind==="withdraw"?"🏦 Uso do capital":"➕ Reposição do capital"}</strong><small>${dateBR(x.date)}${x.description?" • "+esc(x.description):""}</small></div><span class="badge ${x.kind==="withdraw"?"red":"green"}">${x.kind==="withdraw"?"-":"+"} ${brl(x.value)}</span></div>`).join(""):"<div class='empty'>Nenhum movimento do capital de giro ainda.</div>"}
 
  settingPrice.value=data.settings.price;settingCost.value=data.settings.cost;const editBtn=document.getElementById("cancelEditBtn");if(editBtn)editBtn.style.display=editingSaleId?"block":"none";settingGoal.value=data.settings.goal;settingInitialStock.value=data.settings.initialStock;settingLowStock.value=data.settings.lowStock;settingWorkingCapitalGoal.value=data.settings.workingCapitalGoal;settingsWorkingCapital.textContent=brl(wc);settingsWorkingCapitalGoalView.textContent=brl(wcGoal);
- productsList.innerHTML=data.products.map(p=>`<div class="item product-card"><div><strong>${esc(p.name)}</strong><div class="product-meta">${esc(p.category||"Açaí")} • Venda ${brl(p.price)} • Custo ${brl(p.cost)}</div></div><div class="actions"><span class="badge ${p.active===false?"red":"green"}">${p.active===false?"inativo":"ativo"}</span><button class="secondary" style="padding:7px 9px;font-size:11px" onclick="editProduct('${esc(p.id)}')">✏️ Editar</button><button class="secondary" style="padding:7px 9px;font-size:11px" onclick="toggleProduct('${esc(p.id)}')">${p.active===false?"Ativar":"Desativar"}</button><button class="danger" style="padding:7px 9px;font-size:11px" onclick="removeProduct('${esc(p.id)}')">Excluir</button></div></div>`).join("")||`<div class="empty">Nenhum produto cadastrado.</div>`;
+ productsList.innerHTML=data.products.map(p=>`<div class="item product-card"><div><strong>${esc(p.name)}</strong><div class="product-meta">${esc(p.category||"Açaí")} • ${productConsumesBottle(p)?"Garrafinha":"Adicional"} • Venda ${brl(p.price)} • Custo ${brl(p.cost)}</div></div><div class="actions"><span class="badge ${p.active===false?"red":"green"}">${p.active===false?"inativo":"ativo"}</span><button class="secondary" style="padding:7px 9px;font-size:11px" onclick="editProduct('${esc(p.id)}')">✏️ Editar</button><button class="secondary" style="padding:7px 9px;font-size:11px" onclick="toggleProduct('${esc(p.id)}')">${p.active===false?"Ativar":"Desativar"}</button><button class="danger" style="padding:7px 9px;font-size:11px" onclick="removeProduct('${esc(p.id)}')">Excluir</button></div></div>`).join("")||`<div class="empty">Nenhum produto cadastrado.</div>`;
  const dl=document.getElementById("clientSuggestions");if(dl)dl.innerHTML=data.clients.map(c=>`<option value="${esc(c.name)}">${esc(c.phone)}</option>`).join("");
  const cl=document.getElementById("clientsList");if(cl)cl.innerHTML=data.clients.slice().sort((a,b)=>String(a.name).localeCompare(String(b.name),"pt-BR")).map(c=>`<div class="item"><div><strong>${esc(c.name)}</strong><small>📲 ${esc(c.phone)}${c.address?" • "+esc(c.address):""}${c.note?"<br>"+esc(c.note):""}</small></div><div class="actions"><button class="secondary" style="padding:7px 9px;font-size:11px" onclick="editClient('${esc(c.id)}')">Editar</button><button class="danger" style="padding:7px 9px;font-size:11px" onclick="deleteClient('${esc(c.id)}')">Excluir</button></div></div>`).join("")||`<div class="empty">Nenhum cliente cadastrado.</div>`;
 
