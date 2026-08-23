@@ -276,11 +276,30 @@ function migrateV28InventoryOnly(){
   data.settings.v28InventoryCorrectionApplied=true;
 }
 
+
+function migrateV30ConfirmedInventory(){
+  if(data.settings?.v30HistoricalStockBaselineSet) return;
+
+  // User-confirmed historical state:
+  // Production = 100 bottles
+  // Bottle-consuming sales = 75
+  // Own consumption = 11
+  // Available stock = 14
+  // Sales report = 76 units (one of the 76 was an add-on and does not consume stock)
+  data.settings.v30HistoricalStockBaseline=14;
+  data.settings.v30HistoricalSalesUnits=76;
+  data.settings.v30HistoricalStockBaselineSet=true;
+
+  (data.sales||[]).forEach(s=>{s.v30Historical=true});
+  (data.production||[]).forEach(p=>{p.v30Historical=true});
+  (data.stockWithdrawals||[]).forEach(w=>{w.v30Historical=true});
+}
+
 function loadData(){
   for(const k of [KEY,...OLD_KEYS]){try{const raw=JSON.parse(localStorage.getItem(k));if(raw){const migrated=normalizeData(raw);if(!("initialStock" in (raw.settings||{}))){const sold=migrated.sales.reduce((a,x)=>a+Number(x.qty||x.items?.reduce((z,i)=>z+i.qty,0)||0),0);const produced=(migrated.production||[]).reduce((a,x)=>a+Number(x.qty||0),0);migrated.settings.initialStock=Math.max(0,sold-produced)}return migrated}}catch(e){}}
   return normalizeData(structuredClone(defaults));
 }
-let data=loadData();migrateHistoricalStockOnly();migrateInitialStockToProduction();migrateV28InventoryOnly();save();
+let data=loadData();migrateHistoricalStockOnly();migrateInitialStockToProduction();migrateV28InventoryOnly();migrateV30ConfirmedInventory();save();
 repairSaleCashEntries();
 let editingSaleId=null;
 let editingProductId=null;
@@ -322,21 +341,35 @@ function updateOrderTotal(){const items=orderItemsFromForm(),subtotal=items.redu
 function whatsappMessage(s){const lines=["💜 *Roxo Mania*","",`Olá, ${s.customerName}! Seu pedido foi registrado com sucesso. 🥤`,"","🧾 *Detalhes do pedido:*",...s.items.map(i=>`• ${i.qty}x ${i.name} — ${brl(i.total)}`),"",`💰 *Subtotal: ${brl(s.subtotal??s.total)}*`,s.deliveryFee?`🛵 *Taxa de entrega: ${brl(s.deliveryFee)}*`:"",`💰 *Total: ${brl(s.total)}*`,`• Pagamento: ${s.payment}`,`• ${s.delivery}${s.address?": "+s.address:""}`,s.note?`• Observação: ${s.note}`:"","",`📅 Data: ${dateBR(s.date)}`,"","Muito mais que açaí. Uma experiência. 💜"];return lines.filter(Boolean).join("\n")}
 function totalProduced(){return data.production.reduce((a,x)=>a+Number(x.qty||0),0)}
 function itemConsumesBottle(i){
+  const linePrice=Number(i?.price);
   const p=productById(i?.productId);
   const text=((p?.name||"")+" "+(p?.category||"")+" "+(i?.name||"")).toLowerCase();
+
+  // ADD-ON RULE: the actual line price is authoritative. Add-ons/creams in
+  // this business are sold as low-value extras and must never consume a bottle.
+  if(Number.isFinite(linePrice) && linePrice>0 && linePrice<10) return false;
   if(/adicional|extra|complemento|cobertura|paçoca|pacoca/.test(text)) return false;
+
   if(p) return inferStockItem(p);
-  const price=Number(i?.price||0);
-  if(price>0 && price<10) return false;
-  return typeof i?.stockItem==="boolean"?i.stockItem:true;
+  if(typeof i?.stockItem==="boolean") return i.stockItem;
+  return true;
 }
 function totalSold(){
- return data.sales.reduce((a,s)=>a+(s.items||[]).reduce((z,i)=>
-   z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0);
+  return data.sales.reduce((a,s)=>
+    a+(s.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0);
 }
-function totalStockWithdrawals(){return data.stockWithdrawals.reduce((a,x)=>a+Number(x.qty||0),0)}
+function totalStockWithdrawals(){
+  return data.stockWithdrawals.reduce((a,x)=>a+Number(x.qty||0),0);
+}
 function stock(){
- return Number(data.settings.initialStock||0)+totalProduced()-totalSold()-totalStockWithdrawals()+Number(data.settings.v28HistoricalStockAdjustment||0);
+  if(data.settings?.v30HistoricalStockBaselineSet){
+    const futureProduced=(data.production||[]).filter(x=>!x.v30Historical).reduce((a,x)=>a+Number(x.qty||0),0);
+    const futureSold=(data.sales||[]).filter(x=>!x.v30Historical).reduce((a,s)=>
+      a+(s.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0);
+    const futureWithdrawals=(data.stockWithdrawals||[]).filter(x=>!x.v30Historical).reduce((a,x)=>a+Number(x.qty||0),0);
+    return Number(data.settings.v30HistoricalStockBaseline||0)+futureProduced-futureSold-futureWithdrawals;
+  }
+  return Number(data.settings.initialStock||0)+totalProduced()-totalSold()-totalStockWithdrawals();
 }
 function stockClass(v){return v<=0?"stock-out":v<=Number(data.settings.lowStock||0)?"stock-low":"stock-ok"}
 function addSale(e){
@@ -602,7 +635,7 @@ function reportMonths(){const set=new Set([today().slice(0,7)]);data.sales.forEa
 function monthLabel(m){if(m==="all")return "Todo o período";const [y,mo]=m.split("-").map(Number);return new Date(y,mo-1,1).toLocaleDateString("pt-BR",{month:"long",year:"numeric"}).replace(/^./,c=>c.toUpperCase())}
 function selectedReportMonth(){const el=document.getElementById("reportMonth");return el?.value||today().slice(0,7)}
 function filteredSales(){const m=selectedReportMonth();return m==="all"?data.sales.slice():data.sales.filter(x=>monthKey(x.date)===m)}
-function exportBackup(){const blob=new Blob([JSON.stringify({version:29,exportedAt:new Date().toISOString(),data},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="roxo-mania-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function exportBackup(){const blob=new Blob([JSON.stringify({version:30,exportedAt:new Date().toISOString(),data},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="roxo-mania-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 function importBackup(e){const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const obj=JSON.parse(r.result);if(!obj.data||!Array.isArray(obj.data.sales)||!Array.isArray(obj.data.production)||!Array.isArray(obj.data.cash))throw Error();data=normalizeData(obj.data);save();render();alert("Backup importado com sucesso! 💜")}catch(err){alert("Não foi possível importar esse backup.")}e.target.value=""};r.readAsText(f)}
 function monthKey(d){return String(d||"").slice(0,7)}
 function salesProfit(list){return list.reduce((a,s)=>a+Number(s.subtotal??s.total??0)-Number(s.costTotal||s.items?.reduce((z,i)=>z+i.cost*i.qty,0)||0),0)}
@@ -811,7 +844,9 @@ function renderProfitDashboard(){
 function renderMonthlyHistory(){
  const el=document.getElementById("monthlyHistory"); if(!el)return;
  const months=reportMonths();
- el.innerHTML=months.map(m=>{const rows=data.sales.filter(x=>monthKey(x.date)===m);const rev=businessRevenue(rows),qty=rows.reduce((a,x)=>a+(x.items||[]).reduce((z,i)=>z+Number(i.qty||0),0),0),profit=salesProfit(rows);return `<div class="item"><div><strong>${esc(monthLabel(m))}</strong><small>${rows.length} pedido(s) • ${qty} garrafinha(s) • Faturamento ${brl(rev)}</small></div><div class="actions"><span class="badge green">${brl(profit)} lucro</span><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="selectReportMonth('${m}')">👁️ Ver mês</button></div></div>`}).join("")||`<div class="empty">Nenhum mês com vendas registradas.</div>`;
+ el.innerHTML=months.map(m=>{const rows=data.sales.filter(x=>monthKey(x.date)===m);const rev=businessRevenue(rows),qty=(data.settings?.v30HistoricalStockBaselineSet?
+  Number(data.settings.v30HistoricalSalesUnits||0)+data.sales.filter(x=>!x.v30Historical&&x.items&&rows.includes(x)).reduce((a,s)=>a+(s.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0)
+  :rows.reduce((a,x)=>a+(x.items||[]).reduce((z,i)=>z+Number(i.qty||0),0),0)),profit=salesProfit(rows);return `<div class="item"><div><strong>${esc(monthLabel(m))}</strong><small>${rows.length} pedido(s) • ${qty} garrafinha(s) • Faturamento ${brl(rev)}</small></div><div class="actions"><span class="badge green">${brl(profit)} lucro</span><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="selectReportMonth('${m}')">👁️ Ver mês</button></div></div>`}).join("")||`<div class="empty">Nenhum mês com vendas registradas.</div>`;
 }
 function selectReportMonth(m){const el=document.getElementById("reportMonth");if(el){el.value=m;render();showTab("sales")}}
 function renderReportMonthOptions(){const el=document.getElementById("reportMonth");if(!el)return;const current=el.value||today().slice(0,7);el.innerHTML=reportMonths().map(m=>`<option value="${m}">${esc(monthLabel(m))}</option>`).join("")+`<option value="all">Todo o período</option>`;el.value=reportMonths().includes(current)?current:today().slice(0,7)}
@@ -827,7 +862,9 @@ if(editableCashHistory) editableCashHistory.innerHTML=cashDaysHTML || '<div clas
  todayText.textContent=new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"});todayRevenue.textContent=brl(revenue);todayQty.textContent=qty;goalValue.textContent=brl(goal);productionValue.textContent=prod;todayProfit.textContent=brl(todayProfitValue);monthProfit.textContent=brl(monthProfitValue);monthProfitSales.textContent=brl(monthProfitValue);workingCapital.textContent=brl(wc);goalPercent.textContent=pct+"%";goalBar.style.width=pct+"%";
  const st=stock();stockValue.textContent=st;productionStock.textContent=st;stockBadge.textContent=st<=0?"sem estoque":st<=Number(data.settings.lowStock||0)?"estoque baixo":"disponíveis";stockBadge.className="badge "+stockClass(st);stockNotice.textContent=st<=0?"⚠️ Estoque zerado. Registre uma produção antes de vender.":st<=Number(data.settings.lowStock||0)?`⚠️ Estoque baixo: restam ${st} garrafinha(s).`:"💜 Estoque calculado automaticamente: produção + estoque inicial − vendas.";saleStockInfo.textContent=`Estoque disponível agora: ${st} garrafinha(s)`;const defaultPriceNotice=document.getElementById("defaultPriceNotice");if(defaultPriceNotice)defaultPriceNotice.textContent=brl(data.settings.price);
  renderReportMonthOptions();
- const fs=filteredSales(),fr=businessRevenue(fs),fq=fs.reduce((a,x)=>a+(x.items||[]).reduce((z,i)=>z+Number(i.qty||0),0),0),fp=salesProfit(fs),fticket=fs.length?fr/fs.length:0,fcustomers=new Set(fs.map(x=>x.customerName?.toLowerCase()).filter(Boolean)).size;
+ const fs=filteredSales(),fr=businessRevenue(fs),fq=(data.settings?.v30HistoricalStockBaselineSet?
+  Number(data.settings.v30HistoricalSalesUnits||0)+data.sales.filter(x=>!x.v30Historical&&x.items).reduce((a,s)=>a+(s.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0)
+  :fs.reduce((a,x)=>a+(x.items||[]).reduce((z,i)=>z+Number(i.qty||0),0),0)),fp=salesProfit(fs),fticket=fs.length?fr/fs.length:0,fcustomers=new Set(fs.map(x=>x.customerName?.toLowerCase()).filter(Boolean)).size;
  allRevenue.textContent=brl(fr);allQty.textContent=fq;avgTicket.textContent=brl(fticket);customerCount.textContent=fcustomers;monthProfitSales.textContent=brl(fp);
  reportSummary.innerHTML=`<strong>${esc(monthLabel(selectedReportMonth()))}</strong> • <strong>${fs.length}</strong> pedido(s) • <strong>${fq}</strong> garrafinha(s) • <strong>${brl(fr)}</strong> faturados • <strong>${brl(fp)}</strong> de lucro estimado`;
  renderMonthlyHistory();
