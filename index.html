@@ -72,7 +72,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <div class="actions"><button class="primary" type="submit">💜 Salvar venda e enviar no WhatsApp</button><button class="ghost" type="button" id="cancelEditBtn" onclick="cancelEditSale()" style="display:none">Cancelar edição</button></div>
 </form></div>
 <div class="notice">Os preços são puxados dos produtos cadastrados. Você pode adicionar novos produtos em <strong>⚙️ Configurações → Produtos</strong>.</div>
-<h2 style="margin-top:24px">Últimos pedidos</h2><div id="salesList" class="list"></div>
+<h2 style="margin-top:24px">🧾 Pedidos</h2><div class="mini" style="margin-bottom:10px">Aqui ficam os pedidos realizados. Você pode editar ou apagar uma venda individual.</div><div id="salesList" class="list"></div>
 </section>
 <section id="clients">
 <h2>👥 Clientes</h2>
@@ -99,9 +99,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <h2>📊 Vendas</h2>
 <div class="grid"><div class="card"><div class="label">Total vendido</div><div class="value green" id="allRevenue">R$ 0,00</div></div><div class="card"><div class="label">Unidades</div><div class="value purple" id="allQty">0</div></div><div class="card"><div class="label">Ticket médio</div><div class="value purple" id="avgTicket">R$ 0,00</div></div><div class="card"><div class="label">Clientes</div><div class="value purple" id="customerCount">0</div></div><div class="card"><div class="label">Lucro do mês</div><div class="value green" id="monthProfitSales">R$ 0,00</div></div></div>
 <div style="height:14px"></div><div class="card"><div class="field"><label>Mês do relatório</label><select id="reportMonth" onchange="render()"></select></div><div style="height:8px"></div><div class="mini">Cada mês começa do zero no relatório, sem apagar os meses anteriores. Você pode voltar a qualquer mês para consultar faturamento, unidades, clientes, ticket médio e lucro.</div><div style="height:12px"></div><div id="reportSummary" class="notice"></div></div>
-<div style="height:14px"></div><div class="card"><h3 style="margin-bottom:10px">📚 Histórico dos meses</h3><div id="monthlyHistory" class="list"></div></div>
-<div style="height:14px"></div><div class="top-actions"><button class="secondary" type="button" onclick="showTab('clients')">👥 Cadastrar / clientes</button></div><div style="height:14px"></div><div class="card"><div class="total"><div><div class="label">Hoje</div><h3>Vendas de hoje</h3></div><span>📅</span></div><div id="todaySalesList" class="list"></div></div><div style="height:14px"></div><div class="card"><div class="total"><div><div class="label">Histórico</div><h3>Vendas registradas</h3></div><span>🥤</span></div><div id="allSalesList" class="list"></div></div>
-<div class="top-actions"><button class="danger" onclick="clearSales()">Apagar vendas</button></div>
+<div style="height:14px"></div><div class="notice">📊 Aqui ficam apenas os relatórios e resultados. Para consultar, editar ou apagar pedidos, use a aba <strong>Venda</strong>.</div><div style="height:14px"></div><div class="card"><h3 style="margin-bottom:10px">📚 Histórico dos meses</h3><div id="monthlyHistory" class="list"></div></div>
+<div style="height:14px"></div><div class="top-actions"><button class="secondary" type="button" onclick="showTab('clients')">👥 Cadastrar / clientes</button></div>
 </section>
 
 <section id="production">
@@ -113,7 +112,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 </section>
 
 <section id="cash">
-<h2>💵 Caixa</h2><div id="cashHistoricalHeader"></div>
+<h2>💵 Caixa</h2>
 <div class="notice">💜 As vendas com entrega entram no faturamento e no Caixa com o valor total, incluindo os R$ 3,00 da entrega. A taxa de entrega não é descontada automaticamente do lucro.</div><div class="notice">🔓 Esqueceu de fechar um dia? No histórico, você pode <strong>Fechar agora</strong> um caixa que ficou aberto ou <strong>Reabrir</strong> um caixa já fechado para refazer o fechamento.</div>
 <div style="height:12px"></div>
 <div class="card"><div class="total"><div><div class="label">📅 Caixa de hoje</div><h3 id="cashDayStatus">Caixa fechado</h3><div class="mini" id="cashDayInfo">Abra o caixa para registrar o saldo inicial.</div></div><span id="cashDayIcon">🔒</span></div><div class="actions"><button id="openCashBtn" class="primary" type="button" onclick="openCash()">🔓 Abrir caixa</button><button id="editOpeningCashBtn" class="secondary" type="button" onclick="editOpeningCash()" style="display:none">✏️ Editar saldo inicial</button><button id="closeCashBtn" class="secondary" type="button" onclick="closeCash()" style="display:none">🔒 Fechar caixa</button></div></div>
@@ -994,7 +993,7 @@ if(customerNameInput){customerNameInput.addEventListener("input",fillCustomerFro
 render();
 </script>
 
-<div class="card"><h3>Histórico dos caixas</h3><div class="mini">Edite ou apague caixas anteriores sem apagar as vendas e movimentações.</div><div id="editableCashHistory" class="list"></div></div>
+<div class="card"><h3>📚 Histórico dos caixas</h3><div class="mini">Este é o único local para consultar, editar, reabrir ou apagar caixas anteriores.</div><div id="editableCashHistory" class="list"></div></div>
 
 <script>
 (function(){
