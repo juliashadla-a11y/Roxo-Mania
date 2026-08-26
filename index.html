@@ -180,7 +180,12 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 
 <script>
 const KEY="roxoManiaAtualizadoV6";
-const OLD_KEYS=["roxoManiaAtualizadoV8","roxoManiaAtualizadoV7","roxoManiaAtualizadoV5","roxoManiaAtualizadoV4","roxoManiaAtualizadoV3"];
+const OLD_KEYS=[
+  "roxoManiaAtualizadoV13","roxoManiaAtualizadoV12","roxoManiaAtualizadoV11",
+  "roxoManiaAtualizadoV10","roxoManiaAtualizadoV9","roxoManiaAtualizadoV8",
+  "roxoManiaAtualizadoV7","roxoManiaAtualizadoV6","roxoManiaAtualizadoV5",
+  "roxoManiaAtualizadoV4","roxoManiaAtualizadoV3"
+];
 const defaultProducts=[
  {id:"tradicional",name:"Tradicional",price:15,cost:8.48,category:"Açaí",stockItem:true,active:true},
  {id:"leitinho",name:"Creme de leitinho",price:15,cost:11.48,category:"Açaí",stockItem:true,active:true},
@@ -364,10 +369,49 @@ function migrateSeptemberReset(){
 }
 
 function loadData(){
-  for(const k of [KEY,...OLD_KEYS]){try{const raw=JSON.parse(localStorage.getItem(k));if(raw){const migrated=normalizeData(raw);if(!("initialStock" in (raw.settings||{}))){const sold=migrated.sales.reduce((a,x)=>a+Number(x.qty||x.items?.reduce((z,i)=>z+i.qty,0)||0),0);const produced=(migrated.production||[]).reduce((a,x)=>a+Number(x.qty||0),0);migrated.settings.initialStock=Math.max(0,sold-produced)}return migrated}}catch(e){}}
+  let current=null;
+  try{const raw=JSON.parse(localStorage.getItem(KEY));if(raw) current=normalizeData(raw);}catch(e){}
+  // Keep the current database as the source of truth. If its product catalog
+  // is missing, recover ONLY the catalog from an older Roxo Mania key.
+  // Never replace sales, cash, production or stock from an older key.
+  if(current){
+    if(!Array.isArray(current.products)||current.products.length===0){
+      for(const k of OLD_KEYS){
+        try{
+          const raw=JSON.parse(localStorage.getItem(k));
+          if(raw && Array.isArray(raw.products) && raw.products.length){
+            current.products=raw.products.map(p=>({...p,stockItem:typeof p.stockItem==='boolean'?p.stockItem:inferStockItem(p)}));
+            break;
+          }
+        }catch(e){}
+      }
+    }
+    return current;
+  }
+  for(const k of OLD_KEYS){
+    try{const raw=JSON.parse(localStorage.getItem(k));if(raw){
+      const migrated=normalizeData(raw);
+      if(!("initialStock" in (raw.settings||{}))){
+        const sold=migrated.sales.reduce((a,x)=>a+Number(x.qty||x.items?.reduce((z,i)=>z+i.qty,0)||0),0);
+        const produced=(migrated.production||[]).reduce((a,x)=>a+Number(x.qty||0),0);
+        migrated.settings.initialStock=Math.max(0,sold-produced);
+      }
+      return migrated;
+    }}catch(e){}
+  }
   return normalizeData(structuredClone(defaults));
 }
-let data=loadData();ensureProductCatalog();data.settings.v41CatalogRepairApplied=true;save();
+let data=loadData();
+// September stock is already established at 25. Preserve it exactly; do not
+// recalculate or alter historical sales/production when this version opens.
+if(data.settings?.v32SeptemberResetApplied && Number(data.settings.v32SeptemberStockBaseline||0)!==25){
+  data.settings.v32SeptemberStockBaseline=25;
+}
+ensureProductCatalog();
+// Normalize product stock rules once, without touching inventory quantities.
+data.products=(data.products||[]).map(p=>({...p,stockItem:typeof p.stockItem==='boolean'?p.stockItem:inferStockItem(p),active:p.active!==false}));
+data.settings.v43CatalogRepairApplied=true;
+save();
 // V32: start the user's new monthly control in September without changing the financial values.
 (function startSeptemberControl(){
   if(data.settings?.v32SeptemberStarted) return;
@@ -427,6 +471,9 @@ function updateOrderTotal(){const items=orderItemsFromForm(),subtotal=items.redu
 function whatsappMessage(s){const lines=["💜 *Roxo Mania*","",`Olá, ${s.customerName}! Seu pedido foi registrado com sucesso. 🥤`,"","🧾 *Detalhes do pedido:*",...s.items.map(i=>`• ${i.qty}x ${i.name} — ${brl(i.total)}`),"",`💰 *Subtotal: ${brl(s.subtotal??s.total)}*`,s.deliveryFee?`🛵 *Taxa de entrega: ${brl(s.deliveryFee)}*`:"",`💰 *Total: ${brl(s.total)}*`,`• Pagamento: ${s.payment}`,`• ${s.delivery}${s.address?": "+s.address:""}`,s.note?`• Observação: ${s.note}`:"","",`📅 Data: ${dateBR(s.date)}`,"","Muito mais que açaí. Uma experiência. 💜"];return lines.filter(Boolean).join("\n")}
 function totalProduced(){return data.production.reduce((a,x)=>a+Number(x.qty||0),0)}
 function itemConsumesBottle(i){
+  // A recorded sale line has its own stockItem snapshot. This prevents a
+  // later product edit from changing whether that historical line consumes a bottle.
+  if(i && i.legacyStockRule && typeof i.stockItem==='boolean') return i.stockItem;
   const p=productById(i?.productId);
   const pid=String(i?.productId||"").toLowerCase();
   const iname=String(i?.name||"").toLowerCase().trim();
@@ -483,7 +530,10 @@ function addSale(e){
  if(!items.length||!date||!customerName||!payment||!delivery){alert("Preencha os dados do cliente e adicione pelo menos um produto. 💜");return}
  if(!whatsapp){alert("Digite um número de WhatsApp válido com DDD. Ex.: (99) 99999-9999");return}
  const qty=items.reduce((a,i)=>a+i.qty,0);
- const stockQty=items.reduce((a,i)=>a+(itemConsumesBottle(i)?i.qty:0),0);
+ // The product's stock type is authoritative for this sale. Each line keeps
+ // its own snapshot so later product edits cannot change this sale's meaning.
+ items.forEach(i=>{const p=productById(i.productId);i.stockItem=!!(p&&productConsumesBottle(p));});
+ const stockQty=items.reduce((a,i)=>a+(i.stockItem?Number(i.qty||0):0),0);
  const oldSale=editingSaleId?data.sales.find(x=>x.id===editingSaleId):null;
  const oldStockQty=oldSale?(oldSale.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0):0;
  const availableForEdit=stock()+oldStockQty;
