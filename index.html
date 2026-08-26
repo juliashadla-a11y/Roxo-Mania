@@ -285,12 +285,9 @@ function migrateV28InventoryOnly(){
 function migrateV30ConfirmedInventory(){
   if(data.settings?.v30HistoricalStockBaselineSet) return;
 
-  // User-confirmed historical state:
-  // Production = 100 bottles
-  // Bottle-consuming sales = 75
-  // Own consumption = 11
-  // Available stock = 14
-  // Sales report = 76 units (one of the 76 was an add-on and does not consume stock)
+  // User-confirmed August historical state. Everything that existed before
+  // the new September control remains historical and must not affect the
+  // new cycle's sales/stock figures or cash.
   data.settings.v30HistoricalStockBaseline=14;
   data.settings.v30HistoricalSalesUnits=76;
   data.settings.v30HistoricalStockBaselineSet=true;
@@ -298,13 +295,26 @@ function migrateV30ConfirmedInventory(){
   (data.sales||[]).forEach(s=>{s.v30Historical=true});
   (data.production||[]).forEach(p=>{p.v30Historical=true});
   (data.stockWithdrawals||[]).forEach(w=>{w.v30Historical=true});
+  (data.cash||[]).forEach(x=>{x.v30Historical=true});
+  Object.values(data.cashDays||{}).forEach(d=>{d.v30Historical=true});
+}
+
+function migrateSeptemberReset(){
+  if(data.settings?.v32SeptemberResetApplied) return;
+
+  // August remains in the historical record. The new September cycle starts
+  // from zero for sales and bottle stock, without deleting or changing the
+  // old financial history.
+  data.settings.v32SeptemberStockBaseline=0;
+  data.settings.v32SeptemberSalesUnits=0;
+  data.settings.v32SeptemberResetApplied=true;
 }
 
 function loadData(){
   for(const k of [KEY,...OLD_KEYS]){try{const raw=JSON.parse(localStorage.getItem(k));if(raw){const migrated=normalizeData(raw);if(!("initialStock" in (raw.settings||{}))){const sold=migrated.sales.reduce((a,x)=>a+Number(x.qty||x.items?.reduce((z,i)=>z+i.qty,0)||0),0);const produced=(migrated.production||[]).reduce((a,x)=>a+Number(x.qty||0),0);migrated.settings.initialStock=Math.max(0,sold-produced)}return migrated}}catch(e){}}
   return normalizeData(structuredClone(defaults));
 }
-let data=loadData();migrateHistoricalStockOnly();migrateInitialStockToProduction();migrateV28InventoryOnly();migrateV30ConfirmedInventory();
+let data=loadData();migrateHistoricalStockOnly();migrateInitialStockToProduction();migrateV28InventoryOnly();migrateV30ConfirmedInventory();migrateSeptemberReset();
 // V32: start the user's new monthly control in September without changing the financial values.
 (function startSeptemberControl(){
   if(data.settings?.v32SeptemberStarted) return;
@@ -385,6 +395,13 @@ function totalStockWithdrawals(){
   return data.stockWithdrawals.reduce((a,x)=>a+Number(x.qty||0),0);
 }
 function stock(){
+  if(data.settings?.v32SeptemberResetApplied){
+    const futureProduced=(data.production||[]).filter(x=>!x.v30Historical).reduce((a,x)=>a+Number(x.qty||0),0);
+    const futureSold=(data.sales||[]).filter(x=>!x.v30Historical).reduce((a,s)=>
+      a+(s.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0);
+    const futureWithdrawals=(data.stockWithdrawals||[]).filter(x=>!x.v30Historical).reduce((a,x)=>a+Number(x.qty||0),0);
+    return Number(data.settings.v32SeptemberStockBaseline||0)+futureProduced-futureSold-futureWithdrawals;
+  }
   if(data.settings?.v30HistoricalStockBaselineSet){
     const futureProduced=(data.production||[]).filter(x=>!x.v30Historical).reduce((a,x)=>a+Number(x.qty||0),0);
     const futureSold=(data.sales||[]).filter(x=>!x.v30Historical).reduce((a,s)=>
