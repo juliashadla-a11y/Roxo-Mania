@@ -123,6 +123,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <div style="height:12px"></div><div class="card capital"><h3 style="margin-bottom:8px">🏦 Capital de giro</h3><p class="mini">Esta é uma reserva separada da operação. A meta fica guardada e o saldo só muda quando você repõe ou usa o capital de giro.</p><div class="grid"><div class="card"><div class="label">Saldo atual</div><div class="value purple" id="cashWorkingCapital">R$ 0,00</div></div><div class="card"><div class="label">Meta</div><div class="value" id="cashWorkingCapitalGoal">R$ 0,00</div></div><div class="card full"><div class="label">Falta para completar a meta</div><div class="value green" id="cashWorkingCapitalGap">R$ 0,00</div></div></div><div style="height:10px"></div><form onsubmit="moveWorkingCapital(event)"><div class="row"><div class="field"><label>Movimento</label><select id="workingCapitalType"><option value="replenish_cash">Repor usando o caixa</option><option value="replenish_profit">Repor usando o lucro separado</option><option value="withdraw">Usar capital de giro</option></select></div><div class="field"><label>Valor</label><input id="workingCapitalValue" type="number" min="0" step=".01" required></div></div><div class="field"><label>Descrição</label><input id="workingCapitalDescription" type="text" placeholder="Ex.: Reposição da reserva / compra emergencial"></div><button class="primary" type="submit">🏦 Registrar movimento do capital</button></form><div style="height:10px"></div><div id="workingCapitalHistory" class="list"></div></div>
 <div style="height:14px"></div><div class="grid"><div class="card"><div class="label">Entradas</div><div class="value green" id="cashIn">R$ 0,00</div></div><div class="card"><div class="label">Saídas</div><div class="value red" id="cashOut">R$ 0,00</div></div><div class="card"><div class="label">💚 Lucro disponível</div><div class="value green" id="cashProfit">R$ 0,00</div><div class="kpi-note">Lucro reservado − saídas do lucro</div></div><div class="card full"><div class="label">Saldo do caixa</div><div class="value purple" id="cashBalance">R$ 0,00</div><div class="kpi-note">Dinheiro que permanece no caixa</div></div></div>
 <div style="height:14px"></div><div class="card"><h3 style="margin-bottom:12px">Movimentações</h3><div id="cashList" class="list"></div></div>
+<div style="height:14px"></div><div class="card"><h3>📚 Histórico dos caixas</h3><div class="mini">Este é o único local para consultar, editar, reabrir ou apagar caixas anteriores.</div><div id="editableCashHistory" class="list"></div></div>
 </section>
 
 <section id="products">
@@ -992,8 +993,6 @@ const customerNameInput=customerNameEl();
 if(customerNameInput){customerNameInput.addEventListener("input",fillCustomerFromName);customerNameInput.addEventListener("change",fillCustomerFromName);customerNameInput.addEventListener("blur",fillCustomerFromName);}
 render();
 </script>
-
-<div class="card"><h3>📚 Histórico dos caixas</h3><div class="mini">Este é o único local para consultar, editar, reabrir ou apagar caixas anteriores.</div><div id="editableCashHistory" class="list"></div></div>
 
 <script>
 (function(){
