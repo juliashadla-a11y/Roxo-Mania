@@ -343,16 +343,18 @@ function totalProduced(){return data.production.reduce((a,x)=>a+Number(x.qty||0)
 function itemConsumesBottle(i){
   const p=productById(i?.productId);
   const linePrice=Number(i?.price);
-  const text=((p?.name||"")+" "+(p?.category||"")+" "+(i?.name||"")).toLowerCase();
+  const category=String(p?.category||i?.category||"").toLowerCase();
+  const name=String(p?.name||i?.name||"").toLowerCase();
 
-  // Add-ons/extras/creams never consume a bottle.
-  if(/adicional|extra|complemento|cobertura|paçoca|pacoca|creme/.test(text)) return false;
-  // Existing add-ons are low-priced; the sale-line price overrides any old flag.
+  // Adicionais vendidos separadamente nunca consomem uma garrafinha.
+  // Os sabores "Creme de ..." cadastrados como garrafinha continuam consumindo 1 unidade.
+  if(/adicional|extra|complemento/.test(category)) return false;
+  if(/adicional|extra|complemento|cobertura|paçoca|pacoca/.test(name)) return false;
   if(Number.isFinite(linePrice) && linePrice>0 && linePrice<10) return false;
 
-  if(p) return inferStockItem(p);
-  if(typeof i?.stockItem==="boolean") return i.stockItem;
-  return true;
+  if(p && typeof p.stockItem === "boolean") return p.stockItem;
+  if(typeof i?.stockItem === "boolean") return i.stockItem;
+  return p ? inferStockItem(p) : true;
 }
 function totalSold(){
   return data.sales.reduce((a,s)=>
@@ -376,10 +378,11 @@ function stockClass(v){return v<=0?"stock-out":v<=Number(data.settings.lowStock|
 function deleteSale(id){
   const sale=data.sales.find(x=>x.id===id);
   if(!sale){alert("Venda não encontrada.");return;}
-  const ok=confirm(`Apagar a venda de ${sale.customerName||"cliente"} no valor de ${brl(Number(sale.total||0))}?\\n\\nEssa ação removerá somente esta venda dos registros.`);
+  const ok=confirm(`Apagar a venda de ${sale.customerName||"cliente"} no valor de ${brl(Number(sale.total||0))}?\n\nA venda será removida, o estoque será recalculado e a entrada correspondente no caixa também será removida.`);
   if(!ok) return;
-
   data.sales=data.sales.filter(x=>x.id!==id);
+  data.cash=(data.cash||[]).filter(x=>x.saleId!==id);
+  if(editingSaleId===id) editingSaleId=null;
   save();
   renderAll();
   alert("Venda apagada com sucesso! 🗑️");
@@ -881,8 +884,8 @@ if(editableCashHistory) editableCashHistory.innerHTML=cashDaysHTML || '<div clas
  allRevenue.textContent=brl(fr);allQty.textContent=fq;avgTicket.textContent=brl(fticket);customerCount.textContent=fcustomers;monthProfitSales.textContent=brl(fp);
  reportSummary.innerHTML=`<strong>${esc(monthLabel(selectedReportMonth()))}</strong> • <strong>${fs.length}</strong> pedido(s) • <strong>${fq}</strong> garrafinha(s) • <strong>${brl(fr)}</strong> faturados • <strong>${brl(fp)}</strong> de lucro estimado`;
  renderMonthlyHistory();
- const saleHTML=data.sales.slice().reverse().slice(0,50).map(x=>{const names=(x.items||[]).map(i=>`${i.qty}x ${esc(i.name)}`).join(" • ");return `<div class="item"><div><strong>${esc(x.customerName||"")}</strong><small>${names}<br>${dateBR(x.date)} • ${x.payment?esc(x.payment):""}${x.delivery?.startsWith("Entrega")?` • ${esc(x.delivery)}${Number(x.deliveryFee||0)>0?" + "+brl(x.deliveryFee):""}`:""}</small></div><div style="text-align:right"><span class="badge green">${brl(x.total)}</span><div class="actions" style="margin-top:6px;justify-content:flex-end"><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editSale(${x.id})">✏️ Editar</button>${x.customerPhone?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="sendSaleWhatsApp(${x.id})">📲 WhatsApp</button>`:""}</div></div></div>`}).join("");salesList.innerHTML=saleHTML||`<div class="empty">Nenhum pedido registrado ainda. 💜</div>`;
-  const todayHTML=data.sales.filter(x=>x.date===t).slice().reverse().map(x=>{const names=(x.items||[]).map(i=>`${i.qty}x ${esc(i.name)}`).join(" • ");return `<div class="item"><div><strong>${esc(x.customerName||"")}</strong><small>${names}<br>${dateBR(x.date)} • ${x.payment?esc(x.payment):""}${x.delivery?.startsWith("Entrega")?` • ${esc(x.delivery)}${Number(x.deliveryFee||0)>0?" + "+brl(x.deliveryFee):""}`:""}</small></div><div style="text-align:right"><span class="badge green">${brl(x.total)}</span><div class="actions" style="margin-top:6px;justify-content:flex-end"><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editSale(${x.id})">✏️ Editar</button>${x.customerPhone?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="sendSaleWhatsApp(${x.id})">📲 WhatsApp</button>`:""}</div></div></div>`}).join("");
+ const saleHTML=data.sales.slice().reverse().slice(0,50).map(x=>{const names=(x.items||[]).map(i=>`${i.qty}x ${esc(i.name)}`).join(" • ");return `<div class="item"><div><strong>${esc(x.customerName||"")}</strong><small>${names}<br>${dateBR(x.date)} • ${x.payment?esc(x.payment):""}${x.delivery?.startsWith("Entrega")?` • ${esc(x.delivery)}${Number(x.deliveryFee||0)>0?" + "+brl(x.deliveryFee):""}`:""}</small></div><div style="text-align:right"><span class="badge green">${brl(x.total)}</span><div class="actions" style="margin-top:6px;justify-content:flex-end"><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editSale(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteSale(${x.id})">🗑️ Apagar</button>${x.customerPhone?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="sendSaleWhatsApp(${x.id})">📲 WhatsApp</button>`:""}</div></div></div>`}).join("");salesList.innerHTML=saleHTML||`<div class="empty">Nenhum pedido registrado ainda. 💜</div>`;
+  const todayHTML=data.sales.filter(x=>x.date===t).slice().reverse().map(x=>{const names=(x.items||[]).map(i=>`${i.qty}x ${esc(i.name)}`).join(" • ");return `<div class="item"><div><strong>${esc(x.customerName||"")}</strong><small>${names}<br>${dateBR(x.date)} • ${x.payment?esc(x.payment):""}${x.delivery?.startsWith("Entrega")?` • ${esc(x.delivery)}${Number(x.deliveryFee||0)>0?" + "+brl(x.deliveryFee):""}`:""}</small></div><div style="text-align:right"><span class="badge green">${brl(x.total)}</span><div class="actions" style="margin-top:6px;justify-content:flex-end"><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editSale(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteSale(${x.id})">🗑️ Apagar</button>${x.customerPhone?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="sendSaleWhatsApp(${x.id})">📲 WhatsApp</button>`:""}</div></div></div>`}).join("");
   todaySalesList.innerHTML=todayHTML||`<div class="empty">Nenhuma venda hoje. 💜</div>`;
   allSalesList.innerHTML=saleHTML||`<div class="empty">Nenhum pedido registrado ainda.</div>`;
  productionTotal.textContent=totalProduced();productionToday.textContent=prod;
