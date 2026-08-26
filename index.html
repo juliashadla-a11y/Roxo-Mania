@@ -46,9 +46,9 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <div class="card"><div class="label">📦 Estoque</div><div class="value purple" id="stockValue">0</div><div id="stockBadge" class="badge purple">disponíveis</div></div>
 <div class="card"><div class="label">🎯 Meta do dia</div><div class="value" id="goalValue">R$ 300,00</div></div>
 <div class="card"><div class="label">📦 Produção hoje</div><div class="value purple" id="productionValue">0</div></div>
-<div class="card"><div class="label">📈 Lucro estimado hoje</div><div class="value green" id="todayProfit">R$ 0,00</div></div>
+
 <div class="card capital"><div class="label">💼 Capital de giro disponível</div><div class="value purple" id="workingCapital">R$ 0,00</div><div class="kpi-note" id="workingCapitalNote">Reserva separada da operação • meta configurada</div></div>
-<div class="card"><div class="label">📅 Lucro no mês</div><div class="value green" id="monthProfit">R$ 0,00</div></div>
+
 <div class="card full"><div class="total"><div><div class="label">Progresso da meta</div><strong id="goalPercent">0%</strong></div><span>🚀</span></div><div class="progress"><div id="goalBar"></div></div></div>
 </div>
 <div class="actions" style="margin-top:14px"><button class="secondary" onclick="showTab('sell')">🧾 Nova venda</button><button class="secondary" onclick="showTab('production')">📦 Registrar produção</button><button class="ghost" onclick="showTab('settings')">⚙️ Configurações</button></div>
@@ -95,12 +95,36 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <div class="notice">💜 Ao registrar uma venda, o cliente também é salvo/atualizado automaticamente no cadastro.</div>
 </section>
 
-<section id="sales">
-<h2>📊 Vendas</h2>
-<div class="grid"><div class="card"><div class="label">Total vendido</div><div class="value green" id="allRevenue">R$ 0,00</div></div><div class="card"><div class="label">Unidades</div><div class="value purple" id="allQty">0</div></div><div class="card"><div class="label">Ticket médio</div><div class="value purple" id="avgTicket">R$ 0,00</div></div><div class="card"><div class="label">Clientes</div><div class="value purple" id="customerCount">0</div></div><div class="card"><div class="label">Lucro do mês</div><div class="value green" id="monthProfitSales">R$ 0,00</div></div></div>
+<section id="reports">
+<h2>📊 Relatórios</h2>
+<div class="grid"><div class="card"><div class="label">Total vendido</div><div class="value green" id="allRevenue">R$ 0,00</div></div><div class="card"><div class="label">Unidades</div><div class="value purple" id="allQty">0</div></div><div class="card"><div class="label">Ticket médio</div><div class="value purple" id="avgTicket">R$ 0,00</div></div><div class="card"><div class="label">Clientes</div><div class="value purple" id="customerCount">0</div></div></div>
 <div style="height:14px"></div><div class="card"><div class="field"><label>Mês do relatório</label><select id="reportMonth" onchange="render()"></select></div><div style="height:8px"></div><div class="mini">Cada mês começa do zero no relatório, sem apagar os meses anteriores. Você pode voltar a qualquer mês para consultar faturamento, unidades, clientes, ticket médio e lucro.</div><div style="height:12px"></div><div id="reportSummary" class="notice"></div></div>
-<div style="height:14px"></div><div class="notice">📊 Aqui ficam apenas os relatórios e resultados. Para consultar, editar ou apagar pedidos, use a aba <strong>Venda</strong>.</div><div style="height:14px"></div><div class="card"><h3 style="margin-bottom:10px">📚 Histórico dos meses</h3><div id="monthlyHistory" class="list"></div></div>
+<div style="height:14px"></div><div class="notice">📊 Aqui ficam apenas os relatórios e resultados. Para consultar, editar ou apagar pedidos, use a aba <strong>Venda</strong>.</div>
+<div style="height:14px"></div><div class="card"><h3 style="margin-bottom:10px">📚 Histórico dos meses</h3><div id="monthlyHistory" class="list"></div></div>
 <div style="height:14px"></div><div class="top-actions"><button class="secondary" type="button" onclick="showTab('clients')">👥 Cadastrar / clientes</button></div>
+</section>
+
+<section id="profit">
+<h2>💚 Lucros</h2>
+<div class="grid">
+  <div class="card"><div class="label">📈 Lucro estimado hoje</div><div class="value green" id="todayProfit">R$ 0,00</div></div>
+  <div class="card"><div class="label">📅 Lucro no mês</div><div class="value green" id="monthProfit">R$ 0,00</div></div>
+  <div class="card"><div class="label">💚 Lucro disponível</div><div class="value green" id="profitAvailable">R$ 0,00</div><div class="kpi-note">Lucro reservado − saídas do lucro</div></div>
+</div>
+<div style="height:14px"></div>
+<div class="card" id="profitDashboard">
+  <h2>📈 Resumo de Lucro</h2>
+  <div class="field" style="margin-bottom:12px">
+    <label>Mês do resumo</label>
+    <input id="profitMonth" type="month">
+  </div>
+  <div id="profitMonthTotal" class="mini"></div>
+  <div id="profitDaysList"></div>
+</div>
+<div style="height:14px"></div>
+<div class="card"><h3 style="margin-bottom:8px">💳 Registrar saída do lucro</h3><p class="mini">Use quando você comprar algo usando o dinheiro que já foi separado como lucro. Essa saída reduz somente o lucro disponível, sem mexer no saldo do caixa.</p><form onsubmit="addProfitExpense(event)"><div class="row"><div class="field"><label>Valor</label><input id="profitExpenseValue" type="number" min="0" step=".01" required></div><div class="field"><label>Descrição</label><input id="profitExpenseDescription" type="text" placeholder="Ex.: Compra paga com o lucro"></div></div><button class="secondary" type="submit">💳 Registrar saída do lucro</button></form></div>
+<div style="height:14px"></div>
+<div class="card"><h3 style="margin-bottom:10px">📚 Histórico dos meses</h3><div id="profitMonthlyHistory" class="list"></div></div>
 </section>
 
 <section id="production">
@@ -119,9 +143,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <div style="height:12px"></div>
 <div class="card"><form onsubmit="addCash(event)"><div class="row"><div class="field"><label>Tipo</label><select id="cashType"><option value="Entrada">Entrada</option><option value="Saída">Saída</option></select></div><div class="field"><label>Valor</label><input id="cashValue" type="number" min="0" step=".01" required></div></div><div class="field"><label>Descrição</label><input id="cashDescription" type="text" placeholder="Ex.: compra de ingredientes"></div><div class="actions"><button id="cashSubmitBtn" class="primary" type="submit">💰 Registrar movimento</button><button id="cancelCashEditBtn" class="secondary" type="button" onclick="cancelCashEdit()" style="display:none">Cancelar edição</button></div></form></div>
 <div style="height:12px"></div><div class="card"><h3 style="margin-bottom:8px">💚 Separar lucro</h3><p class="mini">Registre o valor do lucro que você retirou do caixa e deixou separado. Isso não é uma despesa da empresa.</p><form onsubmit="separateProfit(event)"><div class="row"><div class="field"><label>Valor do lucro</label><input id="profitValue" type="number" min="0" step=".01" required></div><div class="field"><label>Descrição</label><input id="profitDescription" type="text" placeholder="Ex.: Lucro separado do dia"></div></div><button class="primary" type="submit">💚 Separar lucro</button></form></div>
-<div style="height:12px"></div><div class="card"><h3 style="margin-bottom:8px">💳 Registrar saída do lucro</h3><p class="mini">Use quando você comprar algo usando o dinheiro que já foi separado como lucro. Essa saída reduz somente o lucro disponível, sem mexer no saldo do caixa.</p><form onsubmit="addProfitExpense(event)"><div class="row"><div class="field"><label>Valor</label><input id="profitExpenseValue" type="number" min="0" step=".01" required></div><div class="field"><label>Descrição</label><input id="profitExpenseDescription" type="text" placeholder="Ex.: Compra paga com o lucro"></div></div><button class="secondary" type="submit">💳 Registrar saída do lucro</button></form></div>
 <div style="height:12px"></div><div class="card capital"><h3 style="margin-bottom:8px">🏦 Capital de giro</h3><p class="mini">Esta é uma reserva separada da operação. A meta fica guardada e o saldo só muda quando você repõe ou usa o capital de giro.</p><div class="grid"><div class="card"><div class="label">Saldo atual</div><div class="value purple" id="cashWorkingCapital">R$ 0,00</div></div><div class="card"><div class="label">Meta</div><div class="value" id="cashWorkingCapitalGoal">R$ 0,00</div></div><div class="card full"><div class="label">Falta para completar a meta</div><div class="value green" id="cashWorkingCapitalGap">R$ 0,00</div></div></div><div style="height:10px"></div><form onsubmit="moveWorkingCapital(event)"><div class="row"><div class="field"><label>Movimento</label><select id="workingCapitalType"><option value="replenish_cash">Repor usando o caixa</option><option value="replenish_profit">Repor usando o lucro separado</option><option value="withdraw">Usar capital de giro</option></select></div><div class="field"><label>Valor</label><input id="workingCapitalValue" type="number" min="0" step=".01" required></div></div><div class="field"><label>Descrição</label><input id="workingCapitalDescription" type="text" placeholder="Ex.: Reposição da reserva / compra emergencial"></div><button class="primary" type="submit">🏦 Registrar movimento do capital</button></form><div style="height:10px"></div><div id="workingCapitalHistory" class="list"></div></div>
-<div style="height:14px"></div><div class="grid"><div class="card"><div class="label">Entradas</div><div class="value green" id="cashIn">R$ 0,00</div></div><div class="card"><div class="label">Saídas</div><div class="value red" id="cashOut">R$ 0,00</div></div><div class="card"><div class="label">💚 Lucro disponível</div><div class="value green" id="cashProfit">R$ 0,00</div><div class="kpi-note">Lucro reservado − saídas do lucro</div></div><div class="card full"><div class="label">Saldo do caixa</div><div class="value purple" id="cashBalance">R$ 0,00</div><div class="kpi-note">Dinheiro que permanece no caixa</div></div></div>
+<div style="height:14px"></div><div class="grid"><div class="card"><div class="label">Entradas</div><div class="value green" id="cashIn">R$ 0,00</div></div><div class="card"><div class="label">Saídas</div><div class="value red" id="cashOut">R$ 0,00</div></div><div class="card"><div class="label">💚 Lucro separado do dia</div><div class="value green" id="cashProfitSeparatedToday">R$ 0,00</div><div class="kpi-note">Valor separado do caixa como lucro</div></div><div class="card full"><div class="label">Saldo do caixa</div><div class="value purple" id="cashBalance">R$ 0,00</div><div class="kpi-note">Dinheiro que permanece no caixa</div></div></div>
 <div style="height:14px"></div><div class="card"><h3 style="margin-bottom:12px">Movimentações</h3><div id="cashList" class="list"></div></div>
 <div style="height:14px"></div><div class="card"><h3>📚 Histórico dos caixas</h3><div class="mini">Este é o único local para consultar, editar, reabrir ou apagar caixas anteriores.</div><div id="editableCashHistory" class="list"></div></div>
 </section>
@@ -142,22 +165,14 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <div class="notice">💜 Os dados continuam salvos no navegador deste dispositivo. O backup permite guardar uma cópia fora dele.</div>
 </section>
 
-<div class="card" id="profitDashboard" style="margin-top:20px">
-  <h2>📈 Resumo de Lucro</h2>
-  <div class="field" style="margin-bottom:12px">
-    <label>Mês do resumo</label>
-    <input id="profitMonth" type="month">
-  </div>
-  <div id="profitMonthTotal" class="mini"></div>
-  <div id="profitDaysList"></div>
-</div>
 
 </main>
 
 <nav>
 <button id="n-home" class="active" onclick="showTab('home')"><span class="nav-icon">🏠</span>Início</button>
 <button id="n-sell" onclick="showTab('sell')"><span class="nav-icon">🧾</span>Venda</button>
-<button id="n-sales" onclick="showTab('sales')"><span class="nav-icon">📊</span>Vendas</button>
+<button id="n-reports" onclick="showTab('reports')"><span class="nav-icon">📊</span>Relatórios</button>
+<button id="n-profit" onclick="showTab('profit')"><span class="nav-icon">💚</span>Lucros</button>
 <button id="n-production" onclick="showTab('production')"><span class="nav-icon">📦</span>Produção</button>
 <button id="n-cash" onclick="showTab('cash')"><span class="nav-icon">💵</span>Caixa</button>
 </nav>
@@ -368,7 +383,7 @@ function save(){localStorage.setItem(KEY,JSON.stringify(data))}
 function realToday(){const d=new Date();const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),day=String(d.getDate()).padStart(2,"0");return `${y}-${m}-${day}`}
 function today(){return data?.settings?.businessDate||realToday()}
 function dateBR(d){return d?new Date(d+"T12:00:00").toLocaleDateString("pt-BR"):""}
-function showTab(id){document.querySelectorAll("section").forEach(s=>s.classList.remove("show"));const target=document.getElementById(id);if(target)target.classList.add("show");document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));const n=document.getElementById("n-"+id);if(n)n.classList.add("active");render();const current=document.getElementById(id);if(current)current.classList.add("show");window.scrollTo({top:0,behavior:"smooth"})}
+function showTab(id){document.querySelectorAll("main > section").forEach(s=>s.classList.remove("show"));const target=document.getElementById(id);if(target)target.classList.add("show");document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));const n=document.getElementById("n-"+id);if(n)n.classList.add("active");render();window.scrollTo({top:0,behavior:"smooth"})}
 function normalizeWhatsApp(phone){let d=String(phone||"").replace(/\D/g,"");if(d.startsWith("00"))d=d.slice(2);if(d.startsWith("55"))return d;if(d.length===10||d.length===11)return"55"+d;return""}
 function productById(id){return data.products.find(p=>p.id===id)}
 function activeProducts(){return data.products.filter(p=>p.active!==false)}
@@ -559,7 +574,7 @@ function cancelCashEdit(){
 }
 function deleteCash(id){
  const item=data.cash.find(x=>x.id===id);if(!item)return;
- if(item.kind==="sale"){alert("Essa entrada pertence a uma venda. Para alterá-la, edite a venda na aba Vendas.");return}
+ if(item.kind==="sale"){alert("Essa entrada pertence a uma venda. Para alterá-la, edite a venda na aba Venda.");return}
  if(["profit_withdrawal","profit_expense","profit_to_capital","working_capital_deposit"].includes(item.kind)){alert("Esse movimento é controlado pela área específica de lucro/capital de giro.");return}
  if(!confirm(`Excluir esta movimentação de ${brl(item.value)}?`))return;
  data.cash=data.cash.filter(x=>x.id!==id);save();render();alert("Movimentação excluída. 🗑️");
@@ -934,7 +949,7 @@ function renderMonthlyHistory(){
   Number(data.settings.v30HistoricalSalesUnits||0)+rows.filter(x=>!x.v30Historical&&x.items).reduce((a,s)=>a+(s.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0)
   :rows.reduce((a,x)=>a+(x.items||[]).reduce((z,i)=>z+Number(i.qty||0),0),0)),profit=salesProfit(rows);return `<div class="item"><div><strong>${esc(monthLabel(m))}</strong><small>${rows.length} pedido(s) • ${qty} garrafinha(s) • Faturamento ${brl(rev)}</small></div><div class="actions"><span class="badge green">${brl(profit)} lucro</span><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="selectReportMonth('${m}')">👁️ Ver mês</button></div></div>`}).join("")||`<div class="empty">Nenhum mês com vendas registradas.</div>`;
 }
-function selectReportMonth(m){const el=document.getElementById("reportMonth");if(el){el.value=m;render();showTab("sales")}}
+function selectReportMonth(m){const el=document.getElementById("reportMonth");if(el){el.value=m;render();showTab("reports")}}
 function renderReportMonthOptions(){const el=document.getElementById("reportMonth");if(!el)return;const current=el.value||today().slice(0,7);el.innerHTML=reportMonths().map(m=>`<option value="${m}">${esc(monthLabel(m))}</option>`).join("")+`<option value="all">Todo o período</option>`;el.value=reportMonths().includes(current)?current:today().slice(0,7)}
 
 function render(){
@@ -945,7 +960,7 @@ if(editableCashHistory) editableCashHistory.innerHTML=cashDaysHTML || '<div clas
 
  const t=today(),ts=data.sales.filter(x=>x.date===t),revenue=businessRevenue(ts),qty=ts.reduce((a,x)=>a+x.qty,0),prod=data.production.filter(x=>x.date===t).reduce((a,x)=>a+x.qty,0),goal=Number(data.settings.goal)||0,pct=goal?Math.min(100,Math.round(revenue/goal*100)):0;
  const thisMonth=monthKey(t),ms=data.sales.filter(x=>monthKey(x.date)===thisMonth),monthRev=businessRevenue(ms),todayProfitValue=salesProfit(ts),monthProfitValue=salesProfit(ms),wc=workingCapital(),wcGoal=Number(data.settings.workingCapitalGoal)||0;
- todayText.textContent=new Date(today()+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"});todayRevenue.textContent=brl(revenue);todayQty.textContent=qty;goalValue.textContent=brl(goal);productionValue.textContent=prod;todayProfit.textContent=brl(todayProfitValue);monthProfit.textContent=brl(monthProfitValue);monthProfitSales.textContent=brl(monthProfitValue);workingCapital.textContent=brl(wc);goalPercent.textContent=pct+"%";goalBar.style.width=pct+"%";
+ todayText.textContent=new Date(today()+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"});todayRevenue.textContent=brl(revenue);todayQty.textContent=qty;goalValue.textContent=brl(goal);productionValue.textContent=prod;const tp=document.getElementById("todayProfit");if(tp)tp.textContent=brl(todayProfitValue);const mp=document.getElementById("monthProfit");if(mp)mp.textContent=brl(monthProfitValue);const mps=document.getElementById("monthProfitSales");if(mps)mps.textContent=brl(monthProfitValue);workingCapital.textContent=brl(wc);goalPercent.textContent=pct+"%";goalBar.style.width=pct+"%";
  const st=stock();stockValue.textContent=st;productionStock.textContent=st;stockBadge.textContent=st<=0?"sem estoque":st<=Number(data.settings.lowStock||0)?"estoque baixo":"disponíveis";stockBadge.className="badge "+stockClass(st);stockNotice.textContent=st<=0?"⚠️ Estoque zerado. Registre uma produção antes de vender.":st<=Number(data.settings.lowStock||0)?`⚠️ Estoque baixo: restam ${st} garrafinha(s).`:"💜 Estoque calculado automaticamente: produção + estoque inicial − vendas.";saleStockInfo.textContent=`Estoque disponível agora: ${st} garrafinha(s)`;const defaultPriceNotice=document.getElementById("defaultPriceNotice");if(defaultPriceNotice)defaultPriceNotice.textContent=brl(data.settings.price);
  renderReportMonthOptions();
  const fs=filteredSales(),fr=businessRevenue(fs),fq=(data.settings?.v32SeptemberResetApplied && selectedReportMonth()===today().slice(0,7)?
@@ -953,9 +968,9 @@ if(editableCashHistory) editableCashHistory.innerHTML=cashDaysHTML || '<div clas
   :data.settings?.v30HistoricalStockBaselineSet && selectedReportMonth()!==today().slice(0,7)?
   Number(data.settings.v30HistoricalSalesUnits||0)+fs.filter(x=>!x.v30Historical&&x.items).reduce((a,s)=>a+(s.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0)
   :fs.reduce((a,x)=>a+(x.items||[]).reduce((z,i)=>z+Number(i.qty||0),0),0)),fp=salesProfit(fs),fticket=fs.length?fr/fs.length:0,fcustomers=new Set(fs.map(x=>x.customerName?.toLowerCase()).filter(Boolean)).size;
- allRevenue.textContent=brl(fr);allQty.textContent=fq;avgTicket.textContent=brl(fticket);customerCount.textContent=fcustomers;monthProfitSales.textContent=brl(fp);
+ allRevenue.textContent=brl(fr);allQty.textContent=fq;avgTicket.textContent=brl(fticket);customerCount.textContent=fcustomers;
  reportSummary.innerHTML=`<strong>${esc(monthLabel(selectedReportMonth()))}</strong> • <strong>${fs.length}</strong> pedido(s) • <strong>${fq}</strong> garrafinha(s) • <strong>${brl(fr)}</strong> faturados • <strong>${brl(fp)}</strong> de lucro estimado`;
- renderMonthlyHistory();
+ renderMonthlyHistory();const pmh=document.getElementById("profitMonthlyHistory");if(pmh){const months=[...new Set(data.sales.map(x=>monthKey(x.date)))].sort().reverse();pmh.innerHTML=months.map(m=>{const rows=data.sales.filter(x=>monthKey(x.date)===m);return `<div class="item"><div><strong>${esc(monthLabel(m))}</strong><small>${rows.length} pedido(s)</small></div><span class="badge green">${brl(salesProfit(rows))} lucro</span></div>`}).join("")||`<div class="empty">Nenhum lucro registrado ainda.</div>`;}
  const saleHTML=data.sales.slice().reverse().slice(0,50).map(x=>{const names=(x.items||[]).map(i=>`${i.qty}x ${esc(i.name)}`).join(" • ");return `<div class="item"><div><strong>${esc(x.customerName||"")}</strong><small>${names}<br>${dateBR(x.date)} • ${x.payment?esc(x.payment):""}${x.delivery?.startsWith("Entrega")?` • ${esc(x.delivery)}${Number(x.deliveryFee||0)>0?" + "+brl(x.deliveryFee):""}`:""}</small></div><div style="text-align:right"><span class="badge green">${brl(x.total)}</span><div class="actions" style="margin-top:6px;justify-content:flex-end"><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editSale(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteSale(${x.id})">🗑️ Apagar</button>${x.customerPhone?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="sendSaleWhatsApp(${x.id})">📲 WhatsApp</button>`:""}</div></div></div>`}).join("");salesList.innerHTML=saleHTML||`<div class="empty">Nenhum pedido registrado ainda. 💜</div>`;
   const todayHTML=data.sales.filter(x=>x.date===t).slice().reverse().map(x=>{const names=(x.items||[]).map(i=>`${i.qty}x ${esc(i.name)}`).join(" • ");return `<div class="item"><div><strong>${esc(x.customerName||"")}</strong><small>${names}<br>${dateBR(x.date)} • ${x.payment?esc(x.payment):""}${x.delivery?.startsWith("Entrega")?` • ${esc(x.delivery)}${Number(x.deliveryFee||0)>0?" + "+brl(x.deliveryFee):""}`:""}</small></div><div style="text-align:right"><span class="badge green">${brl(x.total)}</span><div class="actions" style="margin-top:6px;justify-content:flex-end"><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editSale(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteSale(${x.id})">🗑️ Apagar</button>${x.customerPhone?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="sendSaleWhatsApp(${x.id})">📲 WhatsApp</button>`:""}</div></div></div>`}).join("");
   todaySalesList.innerHTML=todayHTML||`<div class="empty">Nenhuma venda hoje. 💜</div>`;
@@ -969,14 +984,14 @@ if(editableCashHistory) editableCashHistory.innerHTML=cashDaysHTML || '<div clas
  const regularOut=data.cash.filter(x=>x.date===cashDate&&x.type==="Saída"&&x.kind!=="profit_withdrawal"&&x.kind!=="profit_expense"&&x.kind!=="profit_to_capital").reduce((a,x)=>a+Number(x.value||0),0);
  const profitSeparatedToday=data.cash.filter(x=>x.date===cashDate&&x.kind==="profit_withdrawal").reduce((a,x)=>a+Number(x.value||0),0);
  const profitSpentToday=data.cash.filter(x=>x.date===cashDate&&x.kind==="profit_expense").reduce((a,x)=>a+Number(x.value||0),0);
- cashIn.textContent=brl(cin);cashOut.textContent=brl(regularOut);cashProfit.textContent=brl(calculateProfitAvailable());cashBalance.textContent=brl(currentDayCashAvailable());
+ cashIn.textContent=brl(cin);cashOut.textContent=brl(regularOut);const cps=document.getElementById("cashProfitSeparatedToday");if(cps)cps.textContent=brl(profitSeparatedToday);const pav=document.getElementById("profitAvailable");if(pav)pav.textContent=brl(calculateProfitAvailable());cashBalance.textContent=brl(currentDayCashAvailable());
  const wcBalance=workingCapital(),wcGoalCash=Number(data.settings.workingCapitalGoal)||0,wcGap=Math.max(0,wcGoalCash-wcBalance);
  const cwc=document.getElementById("cashWorkingCapital"),cwg=document.getElementById("cashWorkingCapitalGoal"),cgap=document.getElementById("cashWorkingCapitalGap");
  if(cwc)cwc.textContent=brl(wcBalance);if(cwg)cwg.textContent=brl(wcGoalCash);if(cgap)cgap.textContent=brl(wcGap);
 
  if(cashDay?.opened){cashDayStatus.textContent=cashDay.closed?"Caixa fechado":"Caixa aberto";cashDayIcon.textContent=cashDay.closed?"🔒":"🔓";if(cashDay.closed){cashDayInfo.textContent=`Abertura: ${brl(cashDay.opening)}${cashDay.openingFromPrevious?" • veio do fechamento anterior":""} • Esperado: ${brl(cashDay.expected)} • Contado: ${brl(cashDay.counted)} • Diferença: ${brl(cashDay.difference)}`;}else{cashDayInfo.textContent=`Abertura: ${brl(cashDay.opening)} • Movimentos: +${brl(cashTotals.in)} / -${brl(cashTotals.out)}`;}}else{cashDayStatus.textContent="Caixa fechado";cashDayIcon.textContent="🔒";cashDayInfo.textContent="Abra o caixa para registrar o saldo inicial.";}
  openCashBtn.style.display=cashDay?.opened?"none":"block";editOpeningCashBtn.style.display=cashDay?.opened?"block":"none";closeCashBtn.style.display=cashDay?.opened&&!cashDay.closed?"block":"none";
- cashList.innerHTML=data.cash.slice().reverse().slice(0,80).map(x=>{const isProfit=x.kind==="profit_withdrawal",isProfitExpense=x.kind==="profit_expense",isProfitToCapital=x.kind==="profit_to_capital",isCapitalDeposit=x.kind==="working_capital_deposit";const special=isProfit||isProfitExpense||isProfitToCapital||isCapitalDeposit;const canEdit=x.kind!=="sale"&&!special;const label=isProfit?"Lucro separado":isProfitExpense?"Saída do lucro":isProfitToCapital?"Lucro → Capital de giro":isCapitalDeposit?"Reposição do capital":x.type;const badgeClass=(isProfit||isProfitExpense||isProfitToCapital)?"purple":x.type==="Entrada"?"green":"red";return `<div class="item"><div><strong>${esc(x.description||"Movimentação")}</strong><small>${dateBR(x.date)} • ${label}</small></div><div style="text-align:right"><span class="badge ${badgeClass}">${isProfit?"💚 ":isProfitExpense?"💳 ":isProfitToCapital?"🏦 ":isCapitalDeposit?"🏦 ":""}${x.type==="Entrada"?"+":"-"} ${brl(x.value)}</span><div class="actions" style="margin-top:6px;justify-content:flex-end">${canEdit?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editCash(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteCash(${x.id})">🗑️ Apagar</button>`:x.kind==="sale"?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="showTab('sales')">✏️ Editar venda</button>`:""}</div></div></div>`}).join("")||`<div class="empty">Nenhuma movimentação registrada.</div>`;
+ cashList.innerHTML=data.cash.slice().reverse().slice(0,80).map(x=>{const isProfit=x.kind==="profit_withdrawal",isProfitExpense=x.kind==="profit_expense",isProfitToCapital=x.kind==="profit_to_capital",isCapitalDeposit=x.kind==="working_capital_deposit";const special=isProfit||isProfitExpense||isProfitToCapital||isCapitalDeposit;const canEdit=x.kind!=="sale"&&!special;const label=isProfit?"Lucro separado":isProfitExpense?"Saída do lucro":isProfitToCapital?"Lucro → Capital de giro":isCapitalDeposit?"Reposição do capital":x.type;const badgeClass=(isProfit||isProfitExpense||isProfitToCapital)?"purple":x.type==="Entrada"?"green":"red";return `<div class="item"><div><strong>${esc(x.description||"Movimentação")}</strong><small>${dateBR(x.date)} • ${label}</small></div><div style="text-align:right"><span class="badge ${badgeClass}">${isProfit?"💚 ":isProfitExpense?"💳 ":isProfitToCapital?"🏦 ":isCapitalDeposit?"🏦 ":""}${x.type==="Entrada"?"+":"-"} ${brl(x.value)}</span><div class="actions" style="margin-top:6px;justify-content:flex-end">${canEdit?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editCash(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteCash(${x.id})">🗑️ Apagar</button>`:x.kind==="sale"?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="showTab('sell')">✏️ Editar venda</button>`:""}</div></div></div>`}).join("")||`<div class="empty">Nenhuma movimentação registrada.</div>`;
  const wch=document.getElementById("workingCapitalHistory");
  if(wch){const hist=(data.workingCapitalMovements||[]).slice().reverse().slice(0,30);wch.innerHTML=hist.length?hist.map(x=>`<div class="item"><div><strong>${x.kind==="withdraw"?"🏦 Uso do capital":"➕ Reposição do capital"}</strong><small>${dateBR(x.date)}${x.description?" • "+esc(x.description):""}</small></div><span class="badge ${x.kind==="withdraw"?"red":"green"}">${x.kind==="withdraw"?"-":"+"} ${brl(x.value)}</span></div>`).join(""):"<div class='empty'>Nenhum movimento do capital de giro ainda.</div>"}
 
