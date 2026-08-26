@@ -176,8 +176,11 @@ const defaults={sales:[],cash:[],cashDays:{},production:[],stockWithdrawals:[],p
 
 function inferStockItem(p){
   const c=String(p?.category||"").toLowerCase();
-  const n=String(p?.name||"").toLowerCase();
+  const n=String(p?.name||"").toLowerCase().trim();
+  const id=String(p?.id||"").toLowerCase();
   const price=Number(p?.price||0);
+  // Tradicional is always a bottle product, never an add-on.
+  if(id==="tradicional" || n==="tradicional" || n==="açaí tradicional" || n==="acai tradicional") return true;
   // In Roxo Mania, add-ons/creams are low-priced extras (R$1,00–R$2,50),
   // while a bottle product is the main 300 ml sale. Never let an old
   // stockItem=true flag make a low-priced add-on consume a bottle.
@@ -204,7 +207,8 @@ function normalizeData(base){
   out.settings.workingCapitalBalance=Math.max(0,Number(out.settings.workingCapitalBalance)||0);
   out.settings.businessDate=out.settings.businessDate||"2026-09-01";
   // Repair the current product master: Açaí products are bottles, not add-ons.
-  out.products=out.products.map(p=>({ ...p, stockItem: inferStockItem({ ...p, stockItem: (String(p.category||"").toLowerCase().includes("açaí")||String(p.category||"").toLowerCase().includes("acai")) ? true : p.stockItem }) }));
+  out.products=out.products.map(p=>({ ...p, stockItem: inferStockItem({ ...p, stockItem: (String(p.id||"").toLowerCase()==="tradicional" || String(p.category||"").toLowerCase().includes("açaí")||String(p.category||"").toLowerCase().includes("acai")) ? true : p.stockItem }) }));
+  out.products=out.products.map(p=>String(p.id||"").toLowerCase()==="tradicional"?{...p,category:"Açaí",stockItem:true}:{...p});
   out.sales=(base.sales||[]).map(s=>{
     const items=Array.isArray(s.items)&&s.items.length?s.items:[{productId:s.productId||String(s.flavor||"").toLowerCase(),name:s.flavor||"Produto",qty:Number(s.qty||1),price:Number(s.price||0),cost:Number(s.cost||out.settings.cost||10),total:Number(s.total||0)}];
     const subtotal=s.subtotal!=null?Number(s.subtotal):items.reduce((a,i)=>a+Number(i.total||0),0);
@@ -214,9 +218,12 @@ function normalizeData(base){
     const costTotal=s.costTotal!=null?Number(s.costTotal):items.reduce((a,i)=>a+Number(i.cost||0)*Number(i.qty||0),0);
     return {...s,items:items.map(i=>{
       const p=out.products.find(x=>x.id===i.productId);
-      const inferred = typeof i.stockItem==="boolean"
-        ? i.stockItem
-        : (p ? productConsumesBottle(p) : !/adicional|extra|creme|cobertura|paçoca|pacoca/i.test(String(i.name||"")));
+      const isTradicional = String(i.productId||"").toLowerCase()==="tradicional" || /^(açaí )?tradicional$/i.test(String(i.name||"").trim());
+      const inferred = isTradicional
+        ? true
+        : (typeof i.stockItem==="boolean"
+          ? i.stockItem
+          : (p ? productConsumesBottle(p) : !/adicional|extra|creme|cobertura|paçoca|pacoca/i.test(String(i.name||""))));
       return {...i,stockItem:inferred};
     }),qty,subtotal,deliveryFee,total,costTotal};
   });
@@ -377,6 +384,11 @@ function itemConsumesBottle(i){
   const p=productById(i?.productId);
   const linePrice=Number(i?.price);
   const text=((p?.name||"")+" "+(p?.category||"")+" "+(i?.name||"")).toLowerCase();
+  const pid=String(i?.productId||"").toLowerCase();
+  const iname=String(i?.name||"").toLowerCase().trim();
+
+  // Tradicional is a bottle product. This overrides any old add-on flag.
+  if(pid==="tradicional" || iname==="tradicional" || iname==="açaí tradicional" || iname==="acai tradicional") return true;
 
   // Add-ons/extras/creams never consume a bottle.
   if(/adicional|extra|complemento|cobertura|paçoca|pacoca|creme/.test(text)) return false;
@@ -573,7 +585,10 @@ function addProfitExpense(e){
  save();e.target.reset();render();alert(`Saída de ${brl(value)} registrada no lucro. 💳`);
 }
 function calculateProfitAvailable(){
- const currentCash=data.cash.filter(x=>!x.v30Historical);
+ const currentMonth=monthKey(today());
+ // Available profit belongs to the current cycle only. August profit is historical
+ // and must not appear in September's available-profit balance.
+ const currentCash=data.cash.filter(x=>!x.v30Historical && monthKey(x.date)===currentMonth);
  const separated=currentCash.filter(x=>x.kind==="profit_withdrawal").reduce((a,x)=>a+Number(x.value||0),0);
  const spent=currentCash.filter(x=>x.kind==="profit_expense"||x.kind==="profit_to_capital").reduce((a,x)=>a+Number(x.value||0),0);
  return Math.max(0,separated-spent);
