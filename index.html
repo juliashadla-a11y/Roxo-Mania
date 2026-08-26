@@ -172,7 +172,7 @@ const defaultProducts=[
  {id:"avelã",name:"Creme de avelã",price:15,cost:12.48,category:"Açaí",stockItem:true,active:true},
  {id:"morango",name:"Creme de morango",price:15,cost:10.98,category:"Açaí",stockItem:true,active:true}
 ];
-const defaults={sales:[],cash:[],cashDays:{},production:[],stockWithdrawals:[],profitAdjustments:[],products:defaultProducts,clients:[],workingCapitalMovements:[],settings:{price:15,cost:10,goal:300,initialStock:0,lowStock:5,workingCapitalGoal:500,workingCapitalBalance:0}};
+const defaults={sales:[],cash:[],cashDays:{},production:[],stockWithdrawals:[],profitAdjustments:[],products:defaultProducts,clients:[],workingCapitalMovements:[],settings:{price:15,cost:10,goal:300,initialStock:0,lowStock:5,workingCapitalGoal:500,workingCapitalBalance:0,businessDate:"2026-09-01"}};
 
 function inferStockItem(p){
   const c=String(p?.category||"").toLowerCase();
@@ -185,6 +185,8 @@ function inferStockItem(p){
      n.includes("adicional")||n.includes("extra")||n.includes("complement")||
      n.includes("cobertura")||n.includes("paçoca")||n.includes("pacoca")) return false;
   if(price>0 && price<10) return false;
+  // Açaí bottles (including Tradicional and the flavored açaís) always consume a bottle.
+  if(c.includes("açaí")||c.includes("acai")) return true;
   if(typeof p?.stockItem==="boolean") return p.stockItem;
   return true;
 }
@@ -200,6 +202,9 @@ function normalizeData(base){
   out.workingCapitalMovements=Array.isArray(base.workingCapitalMovements)?base.workingCapitalMovements:[];
   out.settings.workingCapitalGoal=Math.max(0,Number(out.settings.workingCapitalGoal)||0);
   out.settings.workingCapitalBalance=Math.max(0,Number(out.settings.workingCapitalBalance)||0);
+  out.settings.businessDate=out.settings.businessDate||"2026-09-01";
+  // Repair the current product master: Açaí products are bottles, not add-ons.
+  out.products=out.products.map(p=>({ ...p, stockItem: inferStockItem({ ...p, stockItem: (String(p.category||"").toLowerCase().includes("açaí")||String(p.category||"").toLowerCase().includes("acai")) ? true : p.stockItem }) }));
   out.sales=(base.sales||[]).map(s=>{
     const items=Array.isArray(s.items)&&s.items.length?s.items:[{productId:s.productId||String(s.flavor||"").toLowerCase(),name:s.flavor||"Produto",qty:Number(s.qty||1),price:Number(s.price||0),cost:Number(s.cost||out.settings.cost||10),total:Number(s.total||0)}];
     const subtotal=s.subtotal!=null?Number(s.subtotal):items.reduce((a,i)=>a+Number(i.total||0),0);
@@ -299,7 +304,24 @@ function loadData(){
   for(const k of [KEY,...OLD_KEYS]){try{const raw=JSON.parse(localStorage.getItem(k));if(raw){const migrated=normalizeData(raw);if(!("initialStock" in (raw.settings||{}))){const sold=migrated.sales.reduce((a,x)=>a+Number(x.qty||x.items?.reduce((z,i)=>z+i.qty,0)||0),0);const produced=(migrated.production||[]).reduce((a,x)=>a+Number(x.qty||0),0);migrated.settings.initialStock=Math.max(0,sold-produced)}return migrated}}catch(e){}}
   return normalizeData(structuredClone(defaults));
 }
-let data=loadData();migrateHistoricalStockOnly();migrateInitialStockToProduction();migrateV28InventoryOnly();migrateV30ConfirmedInventory();save();
+let data=loadData();migrateHistoricalStockOnly();migrateInitialStockToProduction();migrateV28InventoryOnly();migrateV30ConfirmedInventory();
+// V32: start the user's new monthly control in September without changing the financial values.
+(function startSeptemberControl(){
+  if(data.settings?.v32SeptemberStarted) return;
+  const from=realToday();
+  const target="2026-09-01";
+  const moveDate=(d)=>d===from?target:d;
+  (data.sales||[]).forEach(s=>{if(s.date===from)s.date=target;});
+  (data.cash||[]).forEach(x=>{if(x.date===from)x.date=target;});
+  (data.production||[]).forEach(x=>{if(x.date===from)x.date=target;});
+  (data.stockWithdrawals||[]).forEach(x=>{if(x.date===from)x.date=target;});
+  (data.profitAdjustments||[]).forEach(x=>{if(x.date===from)x.date=target;});
+  (data.workingCapitalMovements||[]).forEach(x=>{if(x.date===from)x.date=target;});
+  if(data.cashDays?.[from]){data.cashDays[target]=data.cashDays[from];delete data.cashDays[from];}
+  data.settings.businessDate=target;
+  data.settings.v32SeptemberStarted=true;
+})();
+save();
 repairSaleCashEntries();
 let editingSaleId=null;
 let editingProductId=null;
@@ -326,7 +348,8 @@ function moneyInput(raw){
 }
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
 function save(){localStorage.setItem(KEY,JSON.stringify(data))}
-function today(){const d=new Date();const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),day=String(d.getDate()).padStart(2,"0");return `${y}-${m}-${day}`}
+function realToday(){const d=new Date();const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),day=String(d.getDate()).padStart(2,"0");return `${y}-${m}-${day}`}
+function today(){return data?.settings?.businessDate||realToday()}
 function dateBR(d){return d?new Date(d+"T12:00:00").toLocaleDateString("pt-BR"):""}
 function showTab(id){document.querySelectorAll("section").forEach(s=>s.classList.remove("show"));const target=document.getElementById(id);if(target)target.classList.add("show");document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));const n=document.getElementById("n-"+id);if(n)n.classList.add("active");render();const current=document.getElementById(id);if(current)current.classList.add("show");window.scrollTo({top:0,behavior:"smooth"})}
 function normalizeWhatsApp(phone){let d=String(phone||"").replace(/\D/g,"");if(d.startsWith("00"))d=d.slice(2);if(d.startsWith("55"))return d;if(d.length===10||d.length===11)return"55"+d;return""}
@@ -343,18 +366,16 @@ function totalProduced(){return data.production.reduce((a,x)=>a+Number(x.qty||0)
 function itemConsumesBottle(i){
   const p=productById(i?.productId);
   const linePrice=Number(i?.price);
-  const category=String(p?.category||i?.category||"").toLowerCase();
-  const name=String(p?.name||i?.name||"").toLowerCase();
+  const text=((p?.name||"")+" "+(p?.category||"")+" "+(i?.name||"")).toLowerCase();
 
-  // Adicionais vendidos separadamente nunca consomem uma garrafinha.
-  // Os sabores "Creme de ..." cadastrados como garrafinha continuam consumindo 1 unidade.
-  if(/adicional|extra|complemento/.test(category)) return false;
-  if(/adicional|extra|complemento|cobertura|paçoca|pacoca/.test(name)) return false;
+  // Add-ons/extras/creams never consume a bottle.
+  if(/adicional|extra|complemento|cobertura|paçoca|pacoca|creme/.test(text)) return false;
+  // Existing add-ons are low-priced; the sale-line price overrides any old flag.
   if(Number.isFinite(linePrice) && linePrice>0 && linePrice<10) return false;
 
-  if(p && typeof p.stockItem === "boolean") return p.stockItem;
-  if(typeof i?.stockItem === "boolean") return i.stockItem;
-  return p ? inferStockItem(p) : true;
+  if(p) return inferStockItem(p);
+  if(typeof i?.stockItem==="boolean") return i.stockItem;
+  return true;
 }
 function totalSold(){
   return data.sales.reduce((a,s)=>
@@ -378,11 +399,10 @@ function stockClass(v){return v<=0?"stock-out":v<=Number(data.settings.lowStock|
 function deleteSale(id){
   const sale=data.sales.find(x=>x.id===id);
   if(!sale){alert("Venda não encontrada.");return;}
-  const ok=confirm(`Apagar a venda de ${sale.customerName||"cliente"} no valor de ${brl(Number(sale.total||0))}?\n\nA venda será removida, o estoque será recalculado e a entrada correspondente no caixa também será removida.`);
+  const ok=confirm(`Apagar a venda de ${sale.customerName||"cliente"} no valor de ${brl(Number(sale.total||0))}?\\n\\nEssa ação removerá somente esta venda dos registros.`);
   if(!ok) return;
+
   data.sales=data.sales.filter(x=>x.id!==id);
-  data.cash=(data.cash||[]).filter(x=>x.saleId!==id);
-  if(editingSaleId===id) editingSaleId=null;
   save();
   renderAll();
   alert("Venda apagada com sucesso! 🗑️");
@@ -647,11 +667,26 @@ function cancelProductEdit(){editingProductId=null;const f=document.querySelecto
 function toggleProduct(id){const p=productById(id);if(!p)return;p.active=p.active===false;save();render()}
 function removeProduct(id){if(!confirm("Remover este produto do cadastro? As vendas antigas serão preservadas."))return;data.products=data.products.filter(p=>p.id!==id);save();render()}
 function clearSales(){if(!confirm("Apagar todas as vendas e as entradas automáticas de venda do Caixa?"))return;const ids=new Set(data.sales.map(x=>x.id));data.sales=[];data.cash=data.cash.filter(x=>!ids.has(x.saleId));save();render()}
+function startNewMonth(){
+  if(data.settings?.v32SeptemberStarted){alert("O controle de setembro já está ativo. 💜");return}
+  if(!confirm("Iniciar o controle de setembro agora? As vendas e o caixa de hoje serão movidos para 01/09 e os próximos lançamentos ficarão em setembro. Nenhum valor será alterado."))return;
+  const from=realToday(),target="2026-09-01";
+  (data.sales||[]).forEach(s=>{if(s.date===from)s.date=target;});
+  (data.cash||[]).forEach(x=>{if(x.date===from)x.date=target;});
+  (data.production||[]).forEach(x=>{if(x.date===from)x.date=target;});
+  (data.stockWithdrawals||[]).forEach(x=>{if(x.date===from)x.date=target;});
+  (data.profitAdjustments||[]).forEach(x=>{if(x.date===from)x.date=target;});
+  (data.workingCapitalMovements||[]).forEach(x=>{if(x.date===from)x.date=target;});
+  if(data.cashDays?.[from]){data.cashDays[target]=data.cashDays[from];delete data.cashDays[from];}
+  data.settings.businessDate=target;data.settings.v32SeptemberStarted=true;
+  repairSaleCashEntries();save();render();
+  alert("Controle de setembro iniciado! 💜\n\nA partir de agora, os novos registros serão lançados em setembro.");
+}
 function reportMonths(){const set=new Set([today().slice(0,7)]);data.sales.forEach(x=>{const m=monthKey(x.date);if(/^\d{4}-\d{2}$/.test(m))set.add(m)});return [...set].sort().reverse()}
 function monthLabel(m){if(m==="all")return "Todo o período";const [y,mo]=m.split("-").map(Number);return new Date(y,mo-1,1).toLocaleDateString("pt-BR",{month:"long",year:"numeric"}).replace(/^./,c=>c.toUpperCase())}
 function selectedReportMonth(){const el=document.getElementById("reportMonth");return el?.value||today().slice(0,7)}
 function filteredSales(){const m=selectedReportMonth();return m==="all"?data.sales.slice():data.sales.filter(x=>monthKey(x.date)===m)}
-function exportBackup(){const blob=new Blob([JSON.stringify({version:31,exportedAt:new Date().toISOString(),data},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="roxo-mania-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function exportBackup(){const blob=new Blob([JSON.stringify({version:32,exportedAt:new Date().toISOString(),data},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="roxo-mania-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 function importBackup(e){const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const obj=JSON.parse(r.result);if(!obj.data||!Array.isArray(obj.data.sales)||!Array.isArray(obj.data.production)||!Array.isArray(obj.data.cash))throw Error();data=normalizeData(obj.data);save();render();alert("Backup importado com sucesso! 💜")}catch(err){alert("Não foi possível importar esse backup.")}e.target.value=""};r.readAsText(f)}
 function monthKey(d){return String(d||"").slice(0,7)}
 function salesProfit(list){return list.reduce((a,s)=>a+Number(s.subtotal??s.total??0)-Number(s.costTotal||s.items?.reduce((z,i)=>z+i.cost*i.qty,0)||0),0)}
@@ -875,7 +910,7 @@ if(editableCashHistory) editableCashHistory.innerHTML=cashDaysHTML || '<div clas
 
  const t=today(),ts=data.sales.filter(x=>x.date===t),revenue=businessRevenue(ts),qty=ts.reduce((a,x)=>a+x.qty,0),prod=data.production.filter(x=>x.date===t).reduce((a,x)=>a+x.qty,0),goal=Number(data.settings.goal)||0,pct=goal?Math.min(100,Math.round(revenue/goal*100)):0;
  const thisMonth=monthKey(t),ms=data.sales.filter(x=>monthKey(x.date)===thisMonth),monthRev=businessRevenue(ms),todayProfitValue=salesProfit(ts),monthProfitValue=salesProfit(ms),wc=workingCapital(),wcGoal=Number(data.settings.workingCapitalGoal)||0;
- todayText.textContent=new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"});todayRevenue.textContent=brl(revenue);todayQty.textContent=qty;goalValue.textContent=brl(goal);productionValue.textContent=prod;todayProfit.textContent=brl(todayProfitValue);monthProfit.textContent=brl(monthProfitValue);monthProfitSales.textContent=brl(monthProfitValue);workingCapital.textContent=brl(wc);goalPercent.textContent=pct+"%";goalBar.style.width=pct+"%";
+ todayText.textContent=new Date(today()+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"});todayRevenue.textContent=brl(revenue);todayQty.textContent=qty;goalValue.textContent=brl(goal);productionValue.textContent=prod;todayProfit.textContent=brl(todayProfitValue);monthProfit.textContent=brl(monthProfitValue);monthProfitSales.textContent=brl(monthProfitValue);workingCapital.textContent=brl(wc);goalPercent.textContent=pct+"%";goalBar.style.width=pct+"%";
  const st=stock();stockValue.textContent=st;productionStock.textContent=st;stockBadge.textContent=st<=0?"sem estoque":st<=Number(data.settings.lowStock||0)?"estoque baixo":"disponíveis";stockBadge.className="badge "+stockClass(st);stockNotice.textContent=st<=0?"⚠️ Estoque zerado. Registre uma produção antes de vender.":st<=Number(data.settings.lowStock||0)?`⚠️ Estoque baixo: restam ${st} garrafinha(s).`:"💜 Estoque calculado automaticamente: produção + estoque inicial − vendas.";saleStockInfo.textContent=`Estoque disponível agora: ${st} garrafinha(s)`;const defaultPriceNotice=document.getElementById("defaultPriceNotice");if(defaultPriceNotice)defaultPriceNotice.textContent=brl(data.settings.price);
  renderReportMonthOptions();
  const fs=filteredSales(),fr=businessRevenue(fs),fq=(data.settings?.v30HistoricalStockBaselineSet?
