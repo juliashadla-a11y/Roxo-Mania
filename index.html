@@ -183,7 +183,7 @@ const KEY="roxoManiaAtualizadoV6";
 const OLD_KEYS=["roxoManiaAtualizadoV8","roxoManiaAtualizadoV7","roxoManiaAtualizadoV5","roxoManiaAtualizadoV4","roxoManiaAtualizadoV3"];
 const defaultProducts=[
  {id:"tradicional",name:"Tradicional",price:15,cost:8.48,category:"Açaí",stockItem:true,active:true},
- {id:"leitinho",name:"Creme de leitinho",price:15,cost:11.48,category:"Açaí",stockItem:true,active:true},
+ {id:"ninho",name:"Creme de Ninho",price:15,cost:11.48,category:"Açaí",stockItem:true,active:true},
  {id:"maracuja",name:"Creme de maracujá",price:15,cost:10.58,category:"Açaí",stockItem:true,active:true},
  {id:"avelã",name:"Creme de avelã",price:15,cost:12.48,category:"Açaí",stockItem:true,active:true},
  {id:"morango",name:"Creme de morango",price:15,cost:10.98,category:"Açaí",stockItem:true,active:true}
@@ -247,53 +247,37 @@ function normalizeData(base){
 }
 
 function ensureProductCatalog(){
-  // Catálogo oficial: sempre garante os 5 produtos principais sem alterar
-  // vendas, caixa, produção ou estoque.
+  // Garante que o catálogo principal continue disponível sem apagar
+  // produtos personalizados já cadastrados.
   if(!Array.isArray(data.products)) data.products=[];
-
+  // If a previous version left an empty product list, rebuild only the
+  // standard catalog; never touch sales, cash or stock quantities.
+  if(data.products.length===0) data.products=[];
+  const price=Number(data.settings?.price)||20;
+  const cost=Number(data.settings?.cost)||0;
   const standard=[
-    {id:"tradicional",name:"Tradicional",category:"Açaí",price:20,cost:8.48},
-    {id:"ninho",name:"Creme de Ninho",category:"Açaí",price:20,cost:11.48},
-    {id:"maracuja",name:"Creme de maracujá",category:"Açaí",price:20,cost:10.58},
-    {id:"avelã",name:"Creme de avelã",category:"Açaí",price:20,cost:12.48},
-    {id:"morango",name:"Creme de morango",category:"Açaí",price:20,cost:10.98}
+    {id:"tradicional",name:"Tradicional",category:"Açaí"},
+    {id:"ninho",name:"Creme de Ninho",category:"Açaí"},
+    {id:"maracuja",name:"Creme de maracujá",category:"Açaí"},
+    {id:"avelã",name:"Creme de avelã",category:"Açaí"},
+    {id:"morango",name:"Creme de morango",category:"Açaí"}
   ];
-
-  const norm=v=>String(v||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim();
-
-  standard.forEach(std=>{
-    let p=data.products.find(x=>String(x.id||"").toLowerCase()===std.id.toLowerCase());
-    if(!p){
-      const aliases={
-        ninho:["creme de leitinho","creme de ninho","leitinho"],
-        tradicional:["tradicional","acai tradicional","açaí tradicional"],
-        maracuja:["creme de maracuja"],
-        "avelã":["creme de avela","creme de avelã"],
-        morango:["creme de morango"]
-      };
-      const names=aliases[std.id]||[std.name];
-      p=data.products.find(x=>names.some(a=>norm(x.name)===norm(a)));
-    }
-    if(!p){
-      p={id:std.id,name:std.name,price:std.price,cost:std.cost,category:std.category,stockItem:true,active:true};
-      data.products.push(p);
-    }else{
-      // Corrige somente identidade/catálogo dos produtos padrão.
-      p.id=std.id;
-      p.name=std.name;
-      p.category=std.category;
-      p.stockItem=true;
-      p.active=p.active!==false;
-      if(!(Number(p.price)>0)) p.price=std.price;
-      if(!(Number(p.cost)>=0)) p.cost=std.cost;
+  const ids=new Set(data.products.map(p=>String(p.id||"").toLowerCase()));
+  standard.forEach(p=>{
+    if(!ids.has(p.id.toLowerCase())){
+      data.products.push({...p,price,cost,stockItem:true,active:true});
     }
   });
-
-  // Qualquer produto cadastrado explicitamente como adicional continua adicional.
+  // Rename the old product id/name to the current official name without creating a duplicate.
+  const oldNinho=data.products.find(p=>String(p.id||"").toLowerCase()==="leitinho");
+  const currentNinho=data.products.find(p=>String(p.id||"").toLowerCase()==="ninho");
+  if(oldNinho && !currentNinho){ oldNinho.id="ninho"; oldNinho.name="Creme de Ninho"; }
+  else if(oldNinho && currentNinho){ data.products=data.products.filter(p=>p!==oldNinho); }
   data.products=data.products.map(p=>({
     ...p,
-    stockItem: typeof p.stockItem === "boolean" ? p.stockItem : inferStockItem(p),
-    active:p.active!==false
+    name:(String(p.id||"").toLowerCase()==="ninho" ? "Creme de Ninho" : p.name),
+    stockItem:true,
+    active:true
   }));
 }
 
@@ -385,11 +369,24 @@ function migrateSeptemberReset(){
   data.settings.v32SeptemberResetApplied=true;
 }
 
+function lockSeptemberInventoryOnce(){
+  if(data.settings?.v45SeptemberInventoryLocked) return;
+  // The user explicitly restarted inventory for September at 25 bottles.
+  // Everything already present before this correction belongs to the August/history
+  // side of the ledger. New production/sales/withdrawals created after this lock
+  // have no v45Historical flag and therefore affect the September stock normally.
+  data.settings.v45SeptemberStockBaseline=25;
+  (data.production||[]).forEach(x=>{x.v45Historical=true;});
+  (data.sales||[]).forEach(x=>{x.v45Historical=true;});
+  (data.stockWithdrawals||[]).forEach(x=>{x.v45Historical=true;});
+  data.settings.v45SeptemberInventoryLocked=true;
+}
+
 function loadData(){
   for(const k of [KEY,...OLD_KEYS]){try{const raw=JSON.parse(localStorage.getItem(k));if(raw){const migrated=normalizeData(raw);if(!("initialStock" in (raw.settings||{}))){const sold=migrated.sales.reduce((a,x)=>a+Number(x.qty||x.items?.reduce((z,i)=>z+i.qty,0)||0),0);const produced=(migrated.production||[]).reduce((a,x)=>a+Number(x.qty||0),0);migrated.settings.initialStock=Math.max(0,sold-produced)}return migrated}}catch(e){}}
   return normalizeData(structuredClone(defaults));
 }
-let data=loadData();ensureProductCatalog();data.settings.v44CatalogRepairApplied=true;save();
+let data=loadData();ensureProductCatalog();lockSeptemberInventoryOnce();data.settings.v45CatalogRepairApplied=true;save();
 // V32: start the user's new monthly control in September without changing the financial values.
 (function startSeptemberControl(){
   if(data.settings?.v32SeptemberStarted) return;
@@ -469,17 +466,21 @@ function totalStockWithdrawals(){
   return data.stockWithdrawals.reduce((a,x)=>a+Number(x.qty||0),0);
 }
 function stock(){
+  if(data.settings?.v45SeptemberInventoryLocked){
+    const produced=(data.production||[]).filter(x=>!x.v45Historical).reduce((a,x)=>a+Number(x.qty||0),0);
+    const sold=(data.sales||[]).filter(x=>!x.v45Historical).reduce((a,s)=>a+(s.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0);
+    const withdrawals=(data.stockWithdrawals||[]).filter(x=>!x.v45Historical).reduce((a,x)=>a+Number(x.qty||0),0);
+    return Number(data.settings.v45SeptemberStockBaseline||25)+produced-sold-withdrawals;
+  }
   if(data.settings?.v32SeptemberResetApplied){
     const futureProduced=(data.production||[]).filter(x=>!x.v30Historical).reduce((a,x)=>a+Number(x.qty||0),0);
-    const futureSold=(data.sales||[]).filter(x=>!x.v30Historical).reduce((a,s)=>
-      a+(s.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0);
+    const futureSold=(data.sales||[]).filter(x=>!x.v30Historical).reduce((a,s)=>a+(s.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0);
     const futureWithdrawals=(data.stockWithdrawals||[]).filter(x=>!x.v30Historical).reduce((a,x)=>a+Number(x.qty||0),0);
     return Number(data.settings.v32SeptemberStockBaseline||0)+futureProduced-futureSold-futureWithdrawals;
   }
   if(data.settings?.v30HistoricalStockBaselineSet){
     const futureProduced=(data.production||[]).filter(x=>!x.v30Historical).reduce((a,x)=>a+Number(x.qty||0),0);
-    const futureSold=(data.sales||[]).filter(x=>!x.v30Historical).reduce((a,s)=>
-      a+(s.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0);
+    const futureSold=(data.sales||[]).filter(x=>!x.v30Historical).reduce((a,s)=>a+(s.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0);
     const futureWithdrawals=(data.stockWithdrawals||[]).filter(x=>!x.v30Historical).reduce((a,x)=>a+Number(x.qty||0),0);
     return Number(data.settings.v30HistoricalStockBaseline||0)+futureProduced-futureSold-futureWithdrawals;
   }
@@ -1044,6 +1045,7 @@ if(editableCashHistory) editableCashHistory.innerHTML=cashDaysHTML || '<div clas
 
  settingPrice.value=data.settings.price;settingCost.value=data.settings.cost;const editBtn=document.getElementById("cancelEditBtn");if(editBtn)editBtn.style.display=editingSaleId?"block":"none";settingGoal.value=data.settings.goal;settingInitialStock.value=data.settings.initialStock;settingLowStock.value=data.settings.lowStock;settingWorkingCapitalGoal.value=data.settings.workingCapitalGoal;settingsWorkingCapital.textContent=brl(wc);settingsWorkingCapitalGoalView.textContent=brl(wcGoal);
  ensureProductCatalog();
+ if(!Array.isArray(data.products) || data.products.length===0){ ensureProductCatalog(); }
  productsList.innerHTML=data.products.map(p=>`<div class="item product-card"><div><strong>${esc(p.name)}</strong><div class="product-meta">${esc(p.category||"Açaí")} • ${p.stockItem===true?"Garrafinha":"Adicional"} • Venda ${brl(p.price)} • Custo ${brl(p.cost)}</div></div><div class="actions"><span class="badge ${p.active===false?"red":"green"}">${p.active===false?"inativo":"ativo"}</span><button class="secondary" style="padding:7px 9px;font-size:11px" onclick="editProduct('${esc(p.id)}')">✏️ Editar</button><button class="secondary" style="padding:7px 9px;font-size:11px" onclick="toggleProduct('${esc(p.id)}')">${p.active===false?"Ativar":"Desativar"}</button><button class="danger" style="padding:7px 9px;font-size:11px" onclick="removeProduct('${esc(p.id)}')">Excluir</button></div></div>`).join("")||`<div class="empty">Nenhum produto cadastrado.</div>`;
  const dl=document.getElementById("clientSuggestions");if(dl)dl.innerHTML=data.clients.map(c=>`<option value="${esc(c.name)}">${esc(c.phone)}</option>`).join("");
  const cl=document.getElementById("clientsList");if(cl)cl.innerHTML=data.clients.slice().sort((a,b)=>String(a.name).localeCompare(String(b.name),"pt-BR")).map(c=>`<div class="item"><div><strong>${esc(c.name)}</strong><small>📲 ${esc(c.phone)}${c.address?" • "+esc(c.address):""}${c.note?"<br>"+esc(c.note):""}</small></div><div class="actions"><button class="secondary" style="padding:7px 9px;font-size:11px" onclick="editClient('${esc(c.id)}')">Editar</button><button class="danger" style="padding:7px 9px;font-size:11px" onclick="deleteClient('${esc(c.id)}')">Excluir</button></div></div>`).join("")||`<div class="empty">Nenhum cliente cadastrado.</div>`;
