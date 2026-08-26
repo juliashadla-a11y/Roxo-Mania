@@ -180,15 +180,10 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 
 <script>
 const KEY="roxoManiaAtualizadoV6";
-const OLD_KEYS=[
-  "roxoManiaAtualizadoV13","roxoManiaAtualizadoV12","roxoManiaAtualizadoV11",
-  "roxoManiaAtualizadoV10","roxoManiaAtualizadoV9","roxoManiaAtualizadoV8",
-  "roxoManiaAtualizadoV7","roxoManiaAtualizadoV6","roxoManiaAtualizadoV5",
-  "roxoManiaAtualizadoV4","roxoManiaAtualizadoV3"
-];
+const OLD_KEYS=["roxoManiaAtualizadoV8","roxoManiaAtualizadoV7","roxoManiaAtualizadoV5","roxoManiaAtualizadoV4","roxoManiaAtualizadoV3"];
 const defaultProducts=[
  {id:"tradicional",name:"Tradicional",price:15,cost:8.48,category:"Açaí",stockItem:true,active:true},
- {id:"leitinho",name:"Creme de leitinho",price:15,cost:11.48,category:"Açaí",stockItem:true,active:true},
+ {id:"leitinho",name:"Creme de Ninho",price:15,cost:11.48,category:"Açaí",stockItem:true,active:true},
  {id:"maracuja",name:"Creme de maracujá",price:15,cost:10.58,category:"Açaí",stockItem:true,active:true},
  {id:"avelã",name:"Creme de avelã",price:15,cost:12.48,category:"Açaí",stockItem:true,active:true},
  {id:"morango",name:"Creme de morango",price:15,cost:10.98,category:"Açaí",stockItem:true,active:true}
@@ -252,30 +247,31 @@ function normalizeData(base){
 }
 
 function ensureProductCatalog(){
-  // Garante que o catálogo principal continue disponível sem apagar
-  // produtos personalizados já cadastrados.
   if(!Array.isArray(data.products)) data.products=[];
-  // If a previous version left an empty product list, rebuild only the
-  // standard catalog; never touch sales, cash or stock quantities.
-  if(data.products.length===0) data.products=[];
   const price=Number(data.settings?.price)||20;
   const cost=Number(data.settings?.cost)||0;
   const standard=[
-    {id:"tradicional",name:"Tradicional",category:"Açaí"},
-    {id:"leitinho",name:"Creme de leitinho",category:"Açaí"},
-    {id:"maracuja",name:"Creme de maracujá",category:"Açaí"},
-    {id:"avelã",name:"Creme de avelã",category:"Açaí"},
-    {id:"morango",name:"Creme de morango",category:"Açaí"}
+    {id:"tradicional",name:"Tradicional",category:"Açaí",stockItem:true},
+    {id:"leitinho",name:"Creme de Ninho",category:"Açaí",stockItem:true},
+    {id:"maracuja",name:"Creme de maracujá",category:"Açaí",stockItem:true},
+    {id:"avelã",name:"Creme de avelã",category:"Açaí",stockItem:true},
+    {id:"morango",name:"Creme de morango",category:"Açaí",stockItem:true}
   ];
-  const ids=new Set(data.products.map(p=>String(p.id||"").toLowerCase()));
-  standard.forEach(p=>{
-    if(!ids.has(p.id.toLowerCase())){
-      data.products.push({...p,price,cost,stockItem:true,active:true});
+  const byId=new Map(data.products.map(p=>[String(p.id||'').toLowerCase(),p]));
+  const oldNinho=byId.get('leitinho');
+  if(oldNinho){ oldNinho.name='Creme de Ninho'; oldNinho.category='Açaí'; oldNinho.stockItem=true; }
+  for(const base of standard){
+    const existing=byId.get(base.id.toLowerCase());
+    if(!existing){ data.products.push({...base,price,cost,active:true}); }
+    else {
+      existing.name=base.name; existing.category='Açaí'; existing.stockItem=true; existing.active=existing.active!==false;
+      if(existing.price==null) existing.price=price;
+      if(existing.cost==null) existing.cost=cost;
     }
-  });
+  }
   data.products=data.products.map(p=>({
     ...p,
-    stockItem:typeof p.stockItem==="boolean" ? p.stockItem : inferStockItem(p),
+    stockItem: standard.some(x=>x.id===p.id) ? true : (typeof p.stockItem==='boolean'?p.stockItem:inferStockItem(p)),
     active:p.active!==false
   }));
 }
@@ -369,49 +365,23 @@ function migrateSeptemberReset(){
 }
 
 function loadData(){
-  let current=null;
-  try{const raw=JSON.parse(localStorage.getItem(KEY));if(raw) current=normalizeData(raw);}catch(e){}
-  // Keep the current database as the source of truth. If its product catalog
-  // is missing, recover ONLY the catalog from an older Roxo Mania key.
-  // Never replace sales, cash, production or stock from an older key.
-  if(current){
-    if(!Array.isArray(current.products)||current.products.length===0){
-      for(const k of OLD_KEYS){
-        try{
-          const raw=JSON.parse(localStorage.getItem(k));
-          if(raw && Array.isArray(raw.products) && raw.products.length){
-            current.products=raw.products.map(p=>({...p,stockItem:typeof p.stockItem==='boolean'?p.stockItem:inferStockItem(p)}));
-            break;
-          }
-        }catch(e){}
-      }
-    }
-    return current;
-  }
-  for(const k of OLD_KEYS){
-    try{const raw=JSON.parse(localStorage.getItem(k));if(raw){
-      const migrated=normalizeData(raw);
-      if(!("initialStock" in (raw.settings||{}))){
-        const sold=migrated.sales.reduce((a,x)=>a+Number(x.qty||x.items?.reduce((z,i)=>z+i.qty,0)||0),0);
-        const produced=(migrated.production||[]).reduce((a,x)=>a+Number(x.qty||0),0);
-        migrated.settings.initialStock=Math.max(0,sold-produced);
-      }
-      return migrated;
-    }}catch(e){}
-  }
+  for(const k of [KEY,...OLD_KEYS]){try{const raw=JSON.parse(localStorage.getItem(k));if(raw){const migrated=normalizeData(raw);if(!("initialStock" in (raw.settings||{}))){const sold=migrated.sales.reduce((a,x)=>a+Number(x.qty||x.items?.reduce((z,i)=>z+i.qty,0)||0),0);const produced=(migrated.production||[]).reduce((a,x)=>a+Number(x.qty||0),0);migrated.settings.initialStock=Math.max(0,sold-produced)}return migrated}}catch(e){}}
   return normalizeData(structuredClone(defaults));
 }
 let data=loadData();
-// September stock is already established at 25. Preserve it exactly; do not
-// recalculate or alter historical sales/production when this version opens.
-if(data.settings?.v32SeptemberResetApplied && Number(data.settings.v32SeptemberStockBaseline||0)!==25){
-  data.settings.v32SeptemberStockBaseline=25;
-}
 ensureProductCatalog();
-// Normalize product stock rules once, without touching inventory quantities.
-data.products=(data.products||[]).map(p=>({...p,stockItem:typeof p.stockItem==='boolean'?p.stockItem:inferStockItem(p),active:p.active!==false}));
-data.settings.v43CatalogRepairApplied=true;
-save();
+// V44: lock the user's confirmed September starting inventory at 25 without
+// recalculating or importing historical production/sales into the new cycle.
+(function repairSeptemberInventory(){
+  if(data.settings?.v44InventoryRepairApplied) return;
+  data.settings.v44InventoryRepairApplied=true;
+  data.settings.v44InventoryBaseline=25;
+  data.settings.v44RepairAt=Date.now();
+  // Everything already recorded before this repair is part of the old snapshot.
+  // New production/sales/withdrawals will be marked by their creation time.
+  save();
+})();
+data.settings.v41CatalogRepairApplied=true;save();
 // V32: start the user's new monthly control in September without changing the financial values.
 (function startSeptemberControl(){
   if(data.settings?.v32SeptemberStarted) return;
@@ -471,9 +441,6 @@ function updateOrderTotal(){const items=orderItemsFromForm(),subtotal=items.redu
 function whatsappMessage(s){const lines=["💜 *Roxo Mania*","",`Olá, ${s.customerName}! Seu pedido foi registrado com sucesso. 🥤`,"","🧾 *Detalhes do pedido:*",...s.items.map(i=>`• ${i.qty}x ${i.name} — ${brl(i.total)}`),"",`💰 *Subtotal: ${brl(s.subtotal??s.total)}*`,s.deliveryFee?`🛵 *Taxa de entrega: ${brl(s.deliveryFee)}*`:"",`💰 *Total: ${brl(s.total)}*`,`• Pagamento: ${s.payment}`,`• ${s.delivery}${s.address?": "+s.address:""}`,s.note?`• Observação: ${s.note}`:"","",`📅 Data: ${dateBR(s.date)}`,"","Muito mais que açaí. Uma experiência. 💜"];return lines.filter(Boolean).join("\n")}
 function totalProduced(){return data.production.reduce((a,x)=>a+Number(x.qty||0),0)}
 function itemConsumesBottle(i){
-  // A recorded sale line has its own stockItem snapshot. This prevents a
-  // later product edit from changing whether that historical line consumes a bottle.
-  if(i && i.legacyStockRule && typeof i.stockItem==='boolean') return i.stockItem;
   const p=productById(i?.productId);
   const pid=String(i?.productId||"").toLowerCase();
   const iname=String(i?.name||"").toLowerCase().trim();
@@ -494,6 +461,14 @@ function totalStockWithdrawals(){
   return data.stockWithdrawals.reduce((a,x)=>a+Number(x.qty||0),0);
 }
 function stock(){
+  if(data.settings?.v44InventoryRepairApplied){
+    const cutoff=Number(data.settings.v44RepairAt||0);
+    const isNew=x=>Number(x?.createdAt||x?.updatedAt||0)>cutoff || x?.v44New===true;
+    const futureProduced=(data.production||[]).filter(isNew).reduce((a,x)=>a+Number(x.qty||0),0);
+    const futureSold=(data.sales||[]).filter(isNew).reduce((a,s)=>a+(s.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0);
+    const futureWithdrawals=(data.stockWithdrawals||[]).filter(isNew).reduce((a,x)=>a+Number(x.qty||0),0);
+    return Number(data.settings.v44InventoryBaseline||25)+futureProduced-futureSold-futureWithdrawals;
+  }
   if(data.settings?.v32SeptemberResetApplied){
     const futureProduced=(data.production||[]).filter(x=>!x.v30Historical).reduce((a,x)=>a+Number(x.qty||0),0);
     const futureSold=(data.sales||[]).filter(x=>!x.v30Historical).reduce((a,s)=>
@@ -530,16 +505,13 @@ function addSale(e){
  if(!items.length||!date||!customerName||!payment||!delivery){alert("Preencha os dados do cliente e adicione pelo menos um produto. 💜");return}
  if(!whatsapp){alert("Digite um número de WhatsApp válido com DDD. Ex.: (99) 99999-9999");return}
  const qty=items.reduce((a,i)=>a+i.qty,0);
- // The product's stock type is authoritative for this sale. Each line keeps
- // its own snapshot so later product edits cannot change this sale's meaning.
- items.forEach(i=>{const p=productById(i.productId);i.stockItem=!!(p&&productConsumesBottle(p));});
- const stockQty=items.reduce((a,i)=>a+(i.stockItem?Number(i.qty||0):0),0);
+ const stockQty=items.reduce((a,i)=>a+(itemConsumesBottle(i)?i.qty:0),0);
  const oldSale=editingSaleId?data.sales.find(x=>x.id===editingSaleId):null;
  const oldStockQty=oldSale?(oldSale.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0):0;
  const availableForEdit=stock()+oldStockQty;
  if(stockQty>availableForEdit){alert(`Estoque insuficiente. Você tem ${availableForEdit} garrafinha(s) disponível(is) para este pedido. 📦`);return}
  const subtotal=items.reduce((a,i)=>a+i.total,0),deliveryFee=delivery==="Entrega"?DELIVERY_FEE:0,total=subtotal+deliveryFee,costTotal=items.reduce((a,i)=>a+i.cost*i.qty,0);
- const sale=oldSale||{id:Date.now()};
+ const sale=oldSale||{id:Date.now(),createdAt:Date.now(),v44New:true};
  Object.assign(sale,{date,items,qty,total,subtotal,deliveryFee,costTotal,customerName,customerPhone,payment,delivery,address,note});
  if(!oldSale)data.sales.push(sale);
  const existingClient=data.clients.find(c=>normalizeWhatsApp(c.phone)===whatsapp);
@@ -742,7 +714,7 @@ function addStockWithdrawal(e){
   }
   const available=stock();
   if(qty>available){alert(`Você tem apenas ${available} garrafinha(s) disponível(is) no estoque.`);return}
-  data.stockWithdrawals.push({id:Date.now(),date:today(),qty,note});
+  data.stockWithdrawals.push({id:Date.now(),createdAt:Date.now(),v44New:true,date:today(),qty,note});
   save();e.target.reset();render();alert(`${qty} garrafinha(s) retirada(s) do estoque. 🥤`);
 }
 function editStockWithdrawal(id){
@@ -768,7 +740,7 @@ function saveProduction(e){
     const btn=e.target.querySelector("button.primary");if(btn)btn.textContent="📦 Salvar produção";
     save();render();alert("Produção atualizada! 📦");return;
   }
-  data.production.push({id:Date.now(),date:today(),qty,note});
+  data.production.push({id:Date.now(),createdAt:Date.now(),v44New:true,date:today(),qty,note});
   save();e.target.reset();render();alert("Produção salva e adicionada ao estoque! 📦");
 }
 function editProduction(id){
