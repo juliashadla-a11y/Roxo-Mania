@@ -183,7 +183,7 @@ const KEY="roxoManiaAtualizadoV6";
 const OLD_KEYS=["roxoManiaAtualizadoV8","roxoManiaAtualizadoV7","roxoManiaAtualizadoV5","roxoManiaAtualizadoV4","roxoManiaAtualizadoV3"];
 const defaultProducts=[
  {id:"tradicional",name:"Tradicional",price:15,cost:8.48,category:"Açaí",stockItem:true,active:true},
- {id:"leitinho",name:"Creme de Ninho",price:15,cost:11.48,category:"Açaí",stockItem:true,active:true},
+ {id:"leitinho",name:"Creme de leitinho",price:15,cost:11.48,category:"Açaí",stockItem:true,active:true},
  {id:"maracuja",name:"Creme de maracujá",price:15,cost:10.58,category:"Açaí",stockItem:true,active:true},
  {id:"avelã",name:"Creme de avelã",price:15,cost:12.48,category:"Açaí",stockItem:true,active:true},
  {id:"morango",name:"Creme de morango",price:15,cost:10.98,category:"Açaí",stockItem:true,active:true}
@@ -247,31 +247,52 @@ function normalizeData(base){
 }
 
 function ensureProductCatalog(){
+  // Catálogo oficial: sempre garante os 5 produtos principais sem alterar
+  // vendas, caixa, produção ou estoque.
   if(!Array.isArray(data.products)) data.products=[];
-  const price=Number(data.settings?.price)||20;
-  const cost=Number(data.settings?.cost)||0;
+
   const standard=[
-    {id:"tradicional",name:"Tradicional",category:"Açaí",stockItem:true},
-    {id:"leitinho",name:"Creme de Ninho",category:"Açaí",stockItem:true},
-    {id:"maracuja",name:"Creme de maracujá",category:"Açaí",stockItem:true},
-    {id:"avelã",name:"Creme de avelã",category:"Açaí",stockItem:true},
-    {id:"morango",name:"Creme de morango",category:"Açaí",stockItem:true}
+    {id:"tradicional",name:"Tradicional",category:"Açaí",price:20,cost:8.48},
+    {id:"ninho",name:"Creme de Ninho",category:"Açaí",price:20,cost:11.48},
+    {id:"maracuja",name:"Creme de maracujá",category:"Açaí",price:20,cost:10.58},
+    {id:"avelã",name:"Creme de avelã",category:"Açaí",price:20,cost:12.48},
+    {id:"morango",name:"Creme de morango",category:"Açaí",price:20,cost:10.98}
   ];
-  const byId=new Map(data.products.map(p=>[String(p.id||'').toLowerCase(),p]));
-  const oldNinho=byId.get('leitinho');
-  if(oldNinho){ oldNinho.name='Creme de Ninho'; oldNinho.category='Açaí'; oldNinho.stockItem=true; }
-  for(const base of standard){
-    const existing=byId.get(base.id.toLowerCase());
-    if(!existing){ data.products.push({...base,price,cost,active:true}); }
-    else {
-      existing.name=base.name; existing.category='Açaí'; existing.stockItem=true; existing.active=existing.active!==false;
-      if(existing.price==null) existing.price=price;
-      if(existing.cost==null) existing.cost=cost;
+
+  const norm=v=>String(v||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim();
+
+  standard.forEach(std=>{
+    let p=data.products.find(x=>String(x.id||"").toLowerCase()===std.id.toLowerCase());
+    if(!p){
+      const aliases={
+        ninho:["creme de leitinho","creme de ninho","leitinho"],
+        tradicional:["tradicional","acai tradicional","açaí tradicional"],
+        maracuja:["creme de maracuja"],
+        "avelã":["creme de avela","creme de avelã"],
+        morango:["creme de morango"]
+      };
+      const names=aliases[std.id]||[std.name];
+      p=data.products.find(x=>names.some(a=>norm(x.name)===norm(a)));
     }
-  }
+    if(!p){
+      p={id:std.id,name:std.name,price:std.price,cost:std.cost,category:std.category,stockItem:true,active:true};
+      data.products.push(p);
+    }else{
+      // Corrige somente identidade/catálogo dos produtos padrão.
+      p.id=std.id;
+      p.name=std.name;
+      p.category=std.category;
+      p.stockItem=true;
+      p.active=p.active!==false;
+      if(!(Number(p.price)>0)) p.price=std.price;
+      if(!(Number(p.cost)>=0)) p.cost=std.cost;
+    }
+  });
+
+  // Qualquer produto cadastrado explicitamente como adicional continua adicional.
   data.products=data.products.map(p=>({
     ...p,
-    stockItem: standard.some(x=>x.id===p.id) ? true : (typeof p.stockItem==='boolean'?p.stockItem:inferStockItem(p)),
+    stockItem: typeof p.stockItem === "boolean" ? p.stockItem : inferStockItem(p),
     active:p.active!==false
   }));
 }
@@ -368,20 +389,7 @@ function loadData(){
   for(const k of [KEY,...OLD_KEYS]){try{const raw=JSON.parse(localStorage.getItem(k));if(raw){const migrated=normalizeData(raw);if(!("initialStock" in (raw.settings||{}))){const sold=migrated.sales.reduce((a,x)=>a+Number(x.qty||x.items?.reduce((z,i)=>z+i.qty,0)||0),0);const produced=(migrated.production||[]).reduce((a,x)=>a+Number(x.qty||0),0);migrated.settings.initialStock=Math.max(0,sold-produced)}return migrated}}catch(e){}}
   return normalizeData(structuredClone(defaults));
 }
-let data=loadData();
-ensureProductCatalog();
-// V44: lock the user's confirmed September starting inventory at 25 without
-// recalculating or importing historical production/sales into the new cycle.
-(function repairSeptemberInventory(){
-  if(data.settings?.v44InventoryRepairApplied) return;
-  data.settings.v44InventoryRepairApplied=true;
-  data.settings.v44InventoryBaseline=25;
-  data.settings.v44RepairAt=Date.now();
-  // Everything already recorded before this repair is part of the old snapshot.
-  // New production/sales/withdrawals will be marked by their creation time.
-  save();
-})();
-data.settings.v41CatalogRepairApplied=true;save();
+let data=loadData();ensureProductCatalog();data.settings.v44CatalogRepairApplied=true;save();
 // V32: start the user's new monthly control in September without changing the financial values.
 (function startSeptemberControl(){
   if(data.settings?.v32SeptemberStarted) return;
@@ -461,14 +469,6 @@ function totalStockWithdrawals(){
   return data.stockWithdrawals.reduce((a,x)=>a+Number(x.qty||0),0);
 }
 function stock(){
-  if(data.settings?.v44InventoryRepairApplied){
-    const cutoff=Number(data.settings.v44RepairAt||0);
-    const isNew=x=>Number(x?.createdAt||x?.updatedAt||0)>cutoff || x?.v44New===true;
-    const futureProduced=(data.production||[]).filter(isNew).reduce((a,x)=>a+Number(x.qty||0),0);
-    const futureSold=(data.sales||[]).filter(isNew).reduce((a,s)=>a+(s.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0);
-    const futureWithdrawals=(data.stockWithdrawals||[]).filter(isNew).reduce((a,x)=>a+Number(x.qty||0),0);
-    return Number(data.settings.v44InventoryBaseline||25)+futureProduced-futureSold-futureWithdrawals;
-  }
   if(data.settings?.v32SeptemberResetApplied){
     const futureProduced=(data.production||[]).filter(x=>!x.v30Historical).reduce((a,x)=>a+Number(x.qty||0),0);
     const futureSold=(data.sales||[]).filter(x=>!x.v30Historical).reduce((a,s)=>
@@ -511,7 +511,7 @@ function addSale(e){
  const availableForEdit=stock()+oldStockQty;
  if(stockQty>availableForEdit){alert(`Estoque insuficiente. Você tem ${availableForEdit} garrafinha(s) disponível(is) para este pedido. 📦`);return}
  const subtotal=items.reduce((a,i)=>a+i.total,0),deliveryFee=delivery==="Entrega"?DELIVERY_FEE:0,total=subtotal+deliveryFee,costTotal=items.reduce((a,i)=>a+i.cost*i.qty,0);
- const sale=oldSale||{id:Date.now(),createdAt:Date.now(),v44New:true};
+ const sale=oldSale||{id:Date.now()};
  Object.assign(sale,{date,items,qty,total,subtotal,deliveryFee,costTotal,customerName,customerPhone,payment,delivery,address,note});
  if(!oldSale)data.sales.push(sale);
  const existingClient=data.clients.find(c=>normalizeWhatsApp(c.phone)===whatsapp);
@@ -714,7 +714,7 @@ function addStockWithdrawal(e){
   }
   const available=stock();
   if(qty>available){alert(`Você tem apenas ${available} garrafinha(s) disponível(is) no estoque.`);return}
-  data.stockWithdrawals.push({id:Date.now(),createdAt:Date.now(),v44New:true,date:today(),qty,note});
+  data.stockWithdrawals.push({id:Date.now(),date:today(),qty,note});
   save();e.target.reset();render();alert(`${qty} garrafinha(s) retirada(s) do estoque. 🥤`);
 }
 function editStockWithdrawal(id){
@@ -740,7 +740,7 @@ function saveProduction(e){
     const btn=e.target.querySelector("button.primary");if(btn)btn.textContent="📦 Salvar produção";
     save();render();alert("Produção atualizada! 📦");return;
   }
-  data.production.push({id:Date.now(),createdAt:Date.now(),v44New:true,date:today(),qty,note});
+  data.production.push({id:Date.now(),date:today(),qty,note});
   save();e.target.reset();render();alert("Produção salva e adicionada ao estoque! 📦");
 }
 function editProduction(id){
