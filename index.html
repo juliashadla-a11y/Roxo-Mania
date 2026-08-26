@@ -196,16 +196,16 @@ function inferStockItem(p){
   const price=Number(p?.price||0);
   // Tradicional is always a bottle product, never an add-on.
   if(id==="tradicional" || n==="tradicional" || n==="açaí tradicional" || n==="acai tradicional") return true;
-  // In Roxo Mania, add-ons/creams are low-priced extras (R$1,00–R$2,50),
-  // while a bottle product is the main 300 ml sale. Never let an old
-  // stockItem=true flag make a low-priced add-on consume a bottle.
+  // Depois que o produto foi cadastrado, o campo "Tipo de estoque" é a fonte
+  // de verdade. Não usamos o nome/preço para sobrescrever essa escolha.
+  if(typeof p?.stockItem==="boolean") return p.stockItem;
   if(c.includes("adicional")||c.includes("extra")||c.includes("complement")||
      n.includes("adicional")||n.includes("extra")||n.includes("complement")||
      n.includes("cobertura")||n.includes("paçoca")||n.includes("pacoca")) return false;
   if(price>0 && price<10) return false;
-  // Açaí bottles (including Tradicional and the flavored açaís) always consume a bottle.
+  // Produtos antigos sem definição de estoque e categorizados como açaí
+  // são tratados como garrafinhas.
   if(c.includes("açaí")||c.includes("acai")) return true;
-  if(typeof p?.stockItem==="boolean") return p.stockItem;
   return true;
 }
 function productConsumesBottle(p){return !!p && inferStockItem(p);}
@@ -243,6 +243,32 @@ function normalizeData(base){
     }),qty,subtotal,deliveryFee,total,costTotal};
   });
   return out;
+}
+
+function ensureProductCatalog(){
+  // Garante que o catálogo principal continue disponível sem apagar
+  // produtos personalizados já cadastrados.
+  if(!Array.isArray(data.products)) data.products=[];
+  const price=Number(data.settings?.price)||20;
+  const cost=Number(data.settings?.cost)||0;
+  const standard=[
+    {id:"tradicional",name:"Tradicional",category:"Açaí"},
+    {id:"leitinho",name:"Creme de leitinho",category:"Açaí"},
+    {id:"maracuja",name:"Creme de maracujá",category:"Açaí"},
+    {id:"avelã",name:"Creme de avelã",category:"Açaí"},
+    {id:"morango",name:"Creme de morango",category:"Açaí"}
+  ];
+  const ids=new Set(data.products.map(p=>String(p.id||"").toLowerCase()));
+  standard.forEach(p=>{
+    if(!ids.has(p.id.toLowerCase())){
+      data.products.push({...p,price,cost,stockItem:true,active:true});
+    }
+  });
+  data.products=data.products.map(p=>({
+    ...p,
+    stockItem:inferStockItem(p),
+    active:p.active!==false
+  }));
 }
 
 function migrateHistoricalStockOnly(){
@@ -336,7 +362,7 @@ function loadData(){
   for(const k of [KEY,...OLD_KEYS]){try{const raw=JSON.parse(localStorage.getItem(k));if(raw){const migrated=normalizeData(raw);if(!("initialStock" in (raw.settings||{}))){const sold=migrated.sales.reduce((a,x)=>a+Number(x.qty||x.items?.reduce((z,i)=>z+i.qty,0)||0),0);const produced=(migrated.production||[]).reduce((a,x)=>a+Number(x.qty||0),0);migrated.settings.initialStock=Math.max(0,sold-produced)}return migrated}}catch(e){}}
   return normalizeData(structuredClone(defaults));
 }
-let data=loadData();migrateHistoricalStockOnly();migrateInitialStockToProduction();migrateV28InventoryOnly();migrateV30ConfirmedInventory();migrateSeptemberReset();
+let data=loadData();ensureProductCatalog();migrateHistoricalStockOnly();migrateInitialStockToProduction();migrateV28InventoryOnly();migrateV30ConfirmedInventory();migrateSeptemberReset();
 // V32: start the user's new monthly control in September without changing the financial values.
 (function startSeptemberControl(){
   if(data.settings?.v32SeptemberStarted) return;
@@ -398,20 +424,22 @@ function totalProduced(){return data.production.reduce((a,x)=>a+Number(x.qty||0)
 function itemConsumesBottle(i){
   const p=productById(i?.productId);
   const linePrice=Number(i?.price);
-  const text=((p?.name||"")+" "+(p?.category||"")+" "+(i?.name||"")).toLowerCase();
   const pid=String(i?.productId||"").toLowerCase();
   const iname=String(i?.name||"").toLowerCase().trim();
 
-  // Tradicional is a bottle product. This overrides any old add-on flag.
-  if(pid==="tradicional" || iname==="tradicional" || iname==="açaí tradicional" || iname==="acai tradicional") return true;
-
-  // Add-ons/extras/creams never consume a bottle.
-  if(/adicional|extra|complemento|cobertura|paçoca|pacoca|creme/.test(text)) return false;
-  // Existing add-ons are low-priced; the sale-line price overrides any old flag.
-  if(Number.isFinite(linePrice) && linePrice>0 && linePrice<10) return false;
-
+  // REGRA PRINCIPAL: se o item corresponde a um produto cadastrado,
+  // o campo "Tipo de estoque" do próprio produto é a única fonte de verdade.
+  // Assim, "Creme de leitinho", "Creme de morango" etc. podem ser garrafinhas
+  // mesmo contendo a palavra "creme" no nome.
   if(p) return inferStockItem(p);
+
+  // Compatibilidade com vendas antigas que não possuem productId válido.
+  if(pid==="tradicional" || iname==="tradicional" || iname==="açaí tradicional" || iname==="acai tradicional") return true;
   if(typeof i?.stockItem==="boolean") return i.stockItem;
+
+  const text=(String(i?.name||"")+" "+String(i?.category||"")).toLowerCase();
+  if(/adicional|extra|complemento|cobertura|paçoca|pacoca/.test(text)) return false;
+  if(Number.isFinite(linePrice) && linePrice>0 && linePrice<10) return false;
   return true;
 }
 function totalSold(){
