@@ -214,7 +214,20 @@ function productConsumesBottle(p){return !!p && inferStockItem(p);}
 function normalizeData(base){
   const out={...defaults,...base,settings:{...defaults.settings,...(base.settings||{})}};
   out.products=(Array.isArray(base.products)&&base.products.length?base.products:structuredClone(defaultProducts)).map(p=>({...p,stockItem:inferStockItem(p)}));
-  out.clients=Array.isArray(base.clients)?base.clients:[];
+  out.clients=Array.isArray(base.clients)?base.clients:(Array.isArray(base.customers)?base.customers:(Array.isArray(base.customerList)?base.customerList:[]));
+  // Recover the customer register from historical/current sales when an older
+  // version lost the separate client array. This does not alter sales or cash.
+  if(out.clients.length===0 && Array.isArray(out.sales)){
+    const seen=new Set();
+    out.sales.forEach(s=>{
+      const name=String(s.customerName||"").trim(), phone=String(s.customerPhone||"").trim();
+      if(!name && !phone)return;
+      const key=(normalizeWhatsApp(phone)||name.toLowerCase()).trim();
+      if(seen.has(key))return;
+      seen.add(key);
+      out.clients.push({id:"recovered-"+key.replace(/\W+/g,"-").slice(0,40),name,phone,address:String(s.address||""),note:String(s.note||"")});
+    });
+  }
   out.cashDays=base.cashDays&&typeof base.cashDays==="object"?base.cashDays:{};
   out.stockWithdrawals=Array.isArray(base.stockWithdrawals)?base.stockWithdrawals:[];
   out.profitAdjustments=Array.isArray(base.profitAdjustments)?base.profitAdjustments:[];
@@ -247,39 +260,29 @@ function normalizeData(base){
 }
 
 function ensureProductCatalog(){
-  // Garante que o catálogo principal continue disponível sem apagar
-  // produtos personalizados já cadastrados.
   if(!Array.isArray(data.products)) data.products=[];
-  // If a previous version left an empty product list, rebuild only the
-  // standard catalog; never touch sales, cash or stock quantities.
-  if(data.products.length===0) data.products=[];
-  const price=Number(data.settings?.price)||20;
-  const cost=Number(data.settings?.cost)||0;
-  const standard=[
-    {id:"tradicional",name:"Tradicional",category:"Açaí"},
-    {id:"ninho",name:"Creme de Ninho",category:"Açaí"},
-    {id:"maracuja",name:"Creme de maracujá",category:"Açaí"},
-    {id:"avelã",name:"Creme de avelã",category:"Açaí"},
-    {id:"morango",name:"Creme de morango",category:"Açaí"}
-  ];
-  const ids=new Set(data.products.map(p=>String(p.id||"").toLowerCase()));
-  standard.forEach(p=>{
-    if(!ids.has(p.id.toLowerCase())){
-      data.products.push({...p,price,cost,stockItem:true,active:true});
-    }
-  });
-  // Rename the old product id/name to the current official name without creating a duplicate.
-  const oldNinho=data.products.find(p=>String(p.id||"").toLowerCase()==="leitinho");
-  const currentNinho=data.products.find(p=>String(p.id||"").toLowerCase()==="ninho");
-  if(oldNinho && !currentNinho){ oldNinho.id="ninho"; oldNinho.name="Creme de Ninho"; }
-  else if(oldNinho && currentNinho){ data.products=data.products.filter(p=>p!==oldNinho); }
-  data.products=data.products.map(p=>({
-    ...p,
-    name:(String(p.id||"").toLowerCase()==="ninho" ? "Creme de Ninho" : p.name),
-    stockItem:true,
-    active:true
-  }));
+  if(data.settings?.v46CatalogResetApplied!==true){
+    const price=Number(data.settings?.price)||20;
+    const cost=Number(data.settings?.cost)||10;
+    data.products=[
+      {id:"acai-tradicional-300",name:"Açaí Tradicional 300ml",price,cost,category:"Açaí",stockItem:true,active:true},
+      {id:"acai-ninho-300",name:"Açaí com Creme de Ninho 300ml",price,cost,category:"Açaí",stockItem:true,active:true},
+      {id:"acai-avela-300",name:"Açaí com Creme de Avelã 300ml",price,cost,category:"Açaí",stockItem:true,active:true},
+      {id:"acai-maracuja-300",name:"Açaí com Creme de Maracujá 300ml",price,cost,category:"Açaí",stockItem:true,active:true},
+      {id:"acai-morango-300",name:"Açaí com Creme de Morango 300ml",price,cost,category:"Açaí",stockItem:true,active:true},
+      {id:"adicional-ninho",name:"Adicional: Creme de Ninho",price:2,cost:0,category:"Adicional",stockItem:false,active:true},
+      {id:"adicional-avela",name:"Adicional: Creme de Avelã",price:2.5,cost:0,category:"Adicional",stockItem:false,active:true},
+      {id:"adicional-maracuja",name:"Adicional: Creme de Maracujá",price:2,cost:0,category:"Adicional",stockItem:false,active:true},
+      {id:"adicional-morango",name:"Adicional: Creme de Morango",price:2,cost:0,category:"Adicional",stockItem:false,active:true},
+      {id:"adicional-pacoca",name:"Adicional: Paçoca",price:1,cost:0,category:"Adicional",stockItem:false,active:true},
+      {id:"adicional-leite-condensado",name:"Adicional: Leite Condensado",price:1,cost:0,category:"Adicional",stockItem:false,active:true},
+      {id:"adicional-leite-po",name:"Adicional: Leite em Pó",price:1,cost:0,category:"Adicional",stockItem:false,active:true}
+    ];
+    data.settings.v46CatalogResetApplied=true;
+  }
+  data.products=data.products.map(p=>({...p,stockItem:p.category==="Adicional"?false:true}));
 }
+
 
 function migrateHistoricalStockOnly(){
   // Inventory-only migration. Sales totals, prices, costs, profit and cash
@@ -578,7 +581,12 @@ function cancelEditSale(){
 
 function saveClient(e){
  e.preventDefault();
- const form=e.target,name=clientFormName.value.trim(),phone=clientFormPhone.value.trim(),address=clientFormAddress.value.trim(),note=clientFormNote.value.trim(),w=normalizeWhatsApp(phone);
+ const form=e.target;
+ const name=document.getElementById("clientFormName")?.value.trim()||"";
+ const phone=document.getElementById("clientFormPhone")?.value.trim()||"";
+ const address=document.getElementById("clientFormAddress")?.value.trim()||"";
+ const note=document.getElementById("clientFormNote")?.value.trim()||"";
+ const w=normalizeWhatsApp(phone);
  if(!name||!w){alert("Informe nome e um WhatsApp válido com DDD. 💜");return}
  const editingId=form.dataset.editingId;
  const existing=editingId?data.clients.find(c=>c.id===editingId):data.clients.find(c=>normalizeWhatsApp(c.phone)===w);
@@ -1057,8 +1065,12 @@ if(editableCashHistory) editableCashHistory.innerHTML=cashDaysHTML || '<div clas
  ensureProductCatalog();
  if(!Array.isArray(data.products) || data.products.length===0){ ensureProductCatalog(); }
  const productsEl=document.getElementById("productsList"); if(productsEl) productsEl.innerHTML=data.products.map(p=>`<div class="item product-card"><div><strong>${esc(p.name)}</strong><div class="product-meta">${esc(p.category||"Açaí")} • ${p.stockItem===true?"Garrafinha":"Adicional"} • Venda ${brl(p.price)} • Custo ${brl(p.cost)}</div></div><div class="actions"><span class="badge ${p.active===false?"red":"green"}">${p.active===false?"inativo":"ativo"}</span><button class="secondary" style="padding:7px 9px;font-size:11px" onclick="editProduct('${esc(p.id)}')">✏️ Editar</button><button class="secondary" style="padding:7px 9px;font-size:11px" onclick="toggleProduct('${esc(p.id)}')">${p.active===false?"Ativar":"Desativar"}</button><button class="danger" style="padding:7px 9px;font-size:11px" onclick="removeProduct('${esc(p.id)}')">Excluir</button></div></div>`).join("")||`<div class="empty">Nenhum produto cadastrado.</div>`;
- const dl=document.getElementById("clientSuggestions");if(dl)dl.innerHTML=data.clients.map(c=>`<option value="${esc(c.name)}">${esc(c.phone)}</option>`).join("");
- const cl=document.getElementById("clientsList");if(cl)cl.innerHTML=data.clients.slice().sort((a,b)=>String(a.name).localeCompare(String(b.name),"pt-BR")).map(c=>`<div class="item"><div><strong>${esc(c.name)}</strong><small>📲 ${esc(c.phone)}${c.address?" • "+esc(c.address):""}${c.note?"<br>"+esc(c.note):""}</small></div><div class="actions"><button class="secondary" style="padding:7px 9px;font-size:11px" onclick="editClient('${esc(c.id)}')">Editar</button><button class="danger" style="padding:7px 9px;font-size:11px" onclick="deleteClient('${esc(c.id)}')">Excluir</button></div></div>`).join("")||`<div class="empty">Nenhum cliente cadastrado.</div>`;
+ const clients=Array.isArray(data.clients)?data.clients:[];
+ const dl=document.getElementById("clientSuggestions");if(dl)dl.innerHTML=clients.map(c=>`<option value="${esc(c.name||"")}">${esc(c.phone||"")}</option>`).join("");
+ const cl=document.getElementById("clientsList");
+ if(cl){
+   cl.innerHTML=clients.slice().sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""),"pt-BR")).map(c=>`<div class="item"><div><strong>${esc(c.name||"Cliente")}</strong><small>📲 ${esc(c.phone||"")}${c.address?" • "+esc(c.address):""}${c.note?"<br>"+esc(c.note):""}</small></div><div class="actions"><button class="secondary" style="padding:7px 9px;font-size:11px" onclick="editClient('${esc(c.id)}')">Editar</button><button class="danger" style="padding:7px 9px;font-size:11px" onclick="deleteClient('${esc(c.id)}')">Excluir</button></div></div>`).join("")||`<div class="empty">Nenhum cliente cadastrado.</div>`;
+ }
 
  if(document.getElementById("orderItems")&&document.getElementById("orderItems").children.length===0)addOrderItem();
 }
@@ -1067,6 +1079,12 @@ saleDate.value=today();
 const customerNameInput=customerNameEl();
 if(customerNameInput){customerNameInput.addEventListener("input",fillCustomerFromName);customerNameInput.addEventListener("change",fillCustomerFromName);customerNameInput.addEventListener("blur",fillCustomerFromName);}
 try{render()}catch(e){console.error("Falha no render principal",e)}
+function renderClientsOnly(){
+  const cl=document.getElementById("clientsList"); if(!cl)return;
+  const clients=Array.isArray(data.clients)?data.clients:[];
+  cl.innerHTML=clients.length?clients.slice().sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""),"pt-BR")).map(c=>`<div class="item"><div><strong>${esc(c.name||"Cliente")}</strong><small>📲 ${esc(c.phone||"")}${c.address?" • "+esc(c.address):""}${c.note?"<br>"+esc(c.note):""}</small></div><div class="actions"><button class="secondary" style="padding:7px 9px;font-size:11px" onclick="editClient('${esc(c.id)}')">Editar</button><button class="danger" style="padding:7px 9px;font-size:11px" onclick="deleteClient('${esc(c.id)}')">Excluir</button></div></div>`).join(""):`<div class="empty">Nenhum cliente cadastrado.</div>`;
+}
+renderClientsOnly();
 renderProductCatalogOnly();
 </script>
 
