@@ -183,7 +183,7 @@ const KEY="roxoManiaAtualizadoV6";
 const OLD_KEYS=["roxoManiaAtualizadoV8","roxoManiaAtualizadoV7","roxoManiaAtualizadoV5","roxoManiaAtualizadoV4","roxoManiaAtualizadoV3"];
 const defaultProducts=[
  {id:"tradicional",name:"Tradicional",price:15,cost:8.48,category:"Açaí",stockItem:true,active:true},
- {id:"ninho",name:"Creme de Ninho",price:15,cost:11.48,category:"Açaí",stockItem:true,active:true},
+ {id:"leitinho",name:"Creme de leitinho",price:15,cost:11.48,category:"Açaí",stockItem:true,active:true},
  {id:"maracuja",name:"Creme de maracujá",price:15,cost:10.58,category:"Açaí",stockItem:true,active:true},
  {id:"avelã",name:"Creme de avelã",price:15,cost:12.48,category:"Açaí",stockItem:true,active:true},
  {id:"morango",name:"Creme de morango",price:15,cost:10.98,category:"Açaí",stockItem:true,active:true}
@@ -250,14 +250,11 @@ function ensureProductCatalog(){
   // Garante que o catálogo principal continue disponível sem apagar
   // produtos personalizados já cadastrados.
   if(!Array.isArray(data.products)) data.products=[];
-  // If a previous version left an empty product list, rebuild only the
-  // standard catalog; never touch sales, cash or stock quantities.
-  if(data.products.length===0) data.products=[];
   const price=Number(data.settings?.price)||20;
   const cost=Number(data.settings?.cost)||0;
   const standard=[
     {id:"tradicional",name:"Tradicional",category:"Açaí"},
-    {id:"ninho",name:"Creme de Ninho",category:"Açaí"},
+    {id:"leitinho",name:"Creme de leitinho",category:"Açaí"},
     {id:"maracuja",name:"Creme de maracujá",category:"Açaí"},
     {id:"avelã",name:"Creme de avelã",category:"Açaí"},
     {id:"morango",name:"Creme de morango",category:"Açaí"}
@@ -268,16 +265,10 @@ function ensureProductCatalog(){
       data.products.push({...p,price,cost,stockItem:true,active:true});
     }
   });
-  // Rename the old product id/name to the current official name without creating a duplicate.
-  const oldNinho=data.products.find(p=>String(p.id||"").toLowerCase()==="leitinho");
-  const currentNinho=data.products.find(p=>String(p.id||"").toLowerCase()==="ninho");
-  if(oldNinho && !currentNinho){ oldNinho.id="ninho"; oldNinho.name="Creme de Ninho"; }
-  else if(oldNinho && currentNinho){ data.products=data.products.filter(p=>p!==oldNinho); }
   data.products=data.products.map(p=>({
     ...p,
-    name:(String(p.id||"").toLowerCase()==="ninho" ? "Creme de Ninho" : p.name),
-    stockItem:true,
-    active:true
+    stockItem:typeof p.stockItem==="boolean" ? p.stockItem : inferStockItem(p),
+    active:p.active!==false
   }));
 }
 
@@ -364,29 +355,16 @@ function migrateSeptemberReset(){
   // August remains in the historical record. The new September cycle starts
   // from zero for sales and bottle stock, without deleting or changing the
   // old financial history.
-  data.settings.v32SeptemberStockBaseline=25;
+  data.settings.v32SeptemberStockBaseline=0;
   data.settings.v32SeptemberSalesUnits=0;
   data.settings.v32SeptemberResetApplied=true;
-}
-
-function lockSeptemberInventoryOnce(){
-  if(data.settings?.v45SeptemberInventoryLocked) return;
-  // The user explicitly restarted inventory for September at 25 bottles.
-  // Everything already present before this correction belongs to the August/history
-  // side of the ledger. New production/sales/withdrawals created after this lock
-  // have no v45Historical flag and therefore affect the September stock normally.
-  data.settings.v45SeptemberStockBaseline=25;
-  (data.production||[]).forEach(x=>{x.v45Historical=true;});
-  (data.sales||[]).forEach(x=>{x.v45Historical=true;});
-  (data.stockWithdrawals||[]).forEach(x=>{x.v45Historical=true;});
-  data.settings.v45SeptemberInventoryLocked=true;
 }
 
 function loadData(){
   for(const k of [KEY,...OLD_KEYS]){try{const raw=JSON.parse(localStorage.getItem(k));if(raw){const migrated=normalizeData(raw);if(!("initialStock" in (raw.settings||{}))){const sold=migrated.sales.reduce((a,x)=>a+Number(x.qty||x.items?.reduce((z,i)=>z+i.qty,0)||0),0);const produced=(migrated.production||[]).reduce((a,x)=>a+Number(x.qty||0),0);migrated.settings.initialStock=Math.max(0,sold-produced)}return migrated}}catch(e){}}
   return normalizeData(structuredClone(defaults));
 }
-let data=loadData();ensureProductCatalog();lockSeptemberInventoryOnce();data.settings.v45CatalogRepairApplied=true;save();
+let data=loadData();ensureProductCatalog();data.settings.v41CatalogRepairApplied=true;save();
 // V32: start the user's new monthly control in September without changing the financial values.
 (function startSeptemberControl(){
   if(data.settings?.v32SeptemberStarted) return;
@@ -404,7 +382,6 @@ let data=loadData();ensureProductCatalog();lockSeptemberInventoryOnce();data.set
   data.settings.v32SeptemberStarted=true;
 })();
 save();
-repairSaleCashEntries();
 let editingSaleId=null;
 let editingProductId=null;
 let editingCashId=null;
@@ -466,21 +443,17 @@ function totalStockWithdrawals(){
   return data.stockWithdrawals.reduce((a,x)=>a+Number(x.qty||0),0);
 }
 function stock(){
-  if(data.settings?.v45SeptemberInventoryLocked){
-    const produced=(data.production||[]).filter(x=>!x.v45Historical).reduce((a,x)=>a+Number(x.qty||0),0);
-    const sold=(data.sales||[]).filter(x=>!x.v45Historical).reduce((a,s)=>a+(s.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0);
-    const withdrawals=(data.stockWithdrawals||[]).filter(x=>!x.v45Historical).reduce((a,x)=>a+Number(x.qty||0),0);
-    return Number(data.settings.v45SeptemberStockBaseline||25)+produced-sold-withdrawals;
-  }
   if(data.settings?.v32SeptemberResetApplied){
     const futureProduced=(data.production||[]).filter(x=>!x.v30Historical).reduce((a,x)=>a+Number(x.qty||0),0);
-    const futureSold=(data.sales||[]).filter(x=>!x.v30Historical).reduce((a,s)=>a+(s.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0);
+    const futureSold=(data.sales||[]).filter(x=>!x.v30Historical).reduce((a,s)=>
+      a+(s.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0);
     const futureWithdrawals=(data.stockWithdrawals||[]).filter(x=>!x.v30Historical).reduce((a,x)=>a+Number(x.qty||0),0);
     return Number(data.settings.v32SeptemberStockBaseline||0)+futureProduced-futureSold-futureWithdrawals;
   }
   if(data.settings?.v30HistoricalStockBaselineSet){
     const futureProduced=(data.production||[]).filter(x=>!x.v30Historical).reduce((a,x)=>a+Number(x.qty||0),0);
-    const futureSold=(data.sales||[]).filter(x=>!x.v30Historical).reduce((a,s)=>a+(s.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0);
+    const futureSold=(data.sales||[]).filter(x=>!x.v30Historical).reduce((a,s)=>
+      a+(s.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0);
     const futureWithdrawals=(data.stockWithdrawals||[]).filter(x=>!x.v30Historical).reduce((a,x)=>a+Number(x.qty||0),0);
     return Number(data.settings.v30HistoricalStockBaseline||0)+futureProduced-futureSold-futureWithdrawals;
   }
@@ -589,6 +562,8 @@ function deleteClient(id){
  data.clients=data.clients.filter(c=>c.id!==id);save();render();
 }
 function addCash(e){
+  const day=getCashDay(today());
+  if(!day?.opened || day.closed){alert("Abra o caixa antes de registrar uma movimentação. 💜");return}
  e.preventDefault();
  const type=cashType.value,value=Number(cashValue.value),description=cashDescription.value.trim();
  if(!value){alert("Informe um valor válido.");return}
@@ -787,20 +762,7 @@ function importBackup(e){const f=e.target.files?.[0];if(!f)return;const r=new Fi
 function monthKey(d){return String(d||"").slice(0,7)}
 function salesProfit(list){return list.reduce((a,s)=>a+Number(s.subtotal??s.total??0)-Number(s.costTotal||s.items?.reduce((z,i)=>z+i.cost*i.qty,0)||0),0)}
 function businessRevenue(list){return list.reduce((a,s)=>a+Number(s.total??s.subtotal??0),0)}
-function repairSaleCashEntries(){
-  let changed=false;
-  for(const s of data.sales){
-    const expected=Number(s.subtotal??(Number(s.total||0)-Number(s.deliveryFee||0)));
-    const total=Number(s.total??(expected+Number(s.deliveryFee||0)));
-    let entry=data.cash.find(x=>x.saleId===s.id&&x.kind!=="delivery");
-    if(entry){if(Math.abs(Number(entry.value||0)-total)>0.001){entry.value=total;changed=true;}if(entry.date!==s.date){entry.date=s.date;changed=true;}if(entry.kind!=="sale"){entry.kind="sale";changed=true;}}
-    else{data.cash.push({id:Date.now()+Math.random(),date:s.date,type:"Entrada",value:total,description:`Venda • ${s.customerName||"Cliente"}`,saleId:s.id,kind:"sale"});changed=true;}
-    // Taxa de entrega pertence ao faturamento/caixa e não gera saída automática.
-    const oldDelivery=data.cash.filter(x=>x.saleId===s.id&&x.kind==="delivery");
-    if(oldDelivery.length){data.cash=data.cash.filter(x=>!(x.saleId===s.id&&x.kind==="delivery"));changed=true;}
-  }
-  if(changed)save();
-}
+function repairSaleCashEntries(){ /* Disabled: cash entries are created only when a sale is actually recorded. */ }
 function getCashDay(date=today()){return data.cashDays[date]||null}
 function cashDayTotals(date=today()){const list=data.cash.filter(x=>x.date===date);return {in:list.filter(x=>x.type==="Entrada").reduce((a,x)=>a+Number(x.value||0),0),out:list.filter(x=>x.type==="Saída"&&x.kind!=="profit_expense"&&x.kind!=="profit_to_capital").reduce((a,x)=>a+Number(x.value||0),0)}}
 function getPreviousClosedCashDay(date=today()){
@@ -1044,9 +1006,8 @@ if(editableCashHistory) editableCashHistory.innerHTML=cashDaysHTML || '<div clas
  if(wch){const hist=(data.workingCapitalMovements||[]).slice().reverse().slice(0,30);wch.innerHTML=hist.length?hist.map(x=>`<div class="item"><div><strong>${x.kind==="withdraw"?"🏦 Uso do capital":"➕ Reposição do capital"}</strong><small>${dateBR(x.date)}${x.description?" • "+esc(x.description):""}</small></div><span class="badge ${x.kind==="withdraw"?"red":"green"}">${x.kind==="withdraw"?"-":"+"} ${brl(x.value)}</span></div>`).join(""):"<div class='empty'>Nenhum movimento do capital de giro ainda.</div>"}
 
  settingPrice.value=data.settings.price;settingCost.value=data.settings.cost;const editBtn=document.getElementById("cancelEditBtn");if(editBtn)editBtn.style.display=editingSaleId?"block":"none";settingGoal.value=data.settings.goal;settingInitialStock.value=data.settings.initialStock;settingLowStock.value=data.settings.lowStock;settingWorkingCapitalGoal.value=data.settings.workingCapitalGoal;settingsWorkingCapital.textContent=brl(wc);settingsWorkingCapitalGoalView.textContent=brl(wcGoal);
- ensureProductCatalog();
- if(!Array.isArray(data.products) || data.products.length===0){ ensureProductCatalog(); }
- productsList.innerHTML=data.products.map(p=>`<div class="item product-card"><div><strong>${esc(p.name)}</strong><div class="product-meta">${esc(p.category||"Açaí")} • ${p.stockItem===true?"Garrafinha":"Adicional"} • Venda ${brl(p.price)} • Custo ${brl(p.cost)}</div></div><div class="actions"><span class="badge ${p.active===false?"red":"green"}">${p.active===false?"inativo":"ativo"}</span><button class="secondary" style="padding:7px 9px;font-size:11px" onclick="editProduct('${esc(p.id)}')">✏️ Editar</button><button class="secondary" style="padding:7px 9px;font-size:11px" onclick="toggleProduct('${esc(p.id)}')">${p.active===false?"Ativar":"Desativar"}</button><button class="danger" style="padding:7px 9px;font-size:11px" onclick="removeProduct('${esc(p.id)}')">Excluir</button></div></div>`).join("")||`<div class="empty">Nenhum produto cadastrado.</div>`;
+ if(!Array.isArray(data.products) || data.products.length===0) ensureProductCatalog();
+ productsList.innerHTML=data.products.map(p=>`<div class="item product-card"><div><strong>${esc(p.name)}</strong><div class="product-meta">${esc(p.category||"Açaí")} • ${productConsumesBottle(p)?"Garrafinha":"Adicional"} • Venda ${brl(p.price)} • Custo ${brl(p.cost)}</div></div><div class="actions"><span class="badge ${p.active===false?"red":"green"}">${p.active===false?"inativo":"ativo"}</span><button class="secondary" style="padding:7px 9px;font-size:11px" onclick="editProduct('${esc(p.id)}')">✏️ Editar</button><button class="secondary" style="padding:7px 9px;font-size:11px" onclick="toggleProduct('${esc(p.id)}')">${p.active===false?"Ativar":"Desativar"}</button><button class="danger" style="padding:7px 9px;font-size:11px" onclick="removeProduct('${esc(p.id)}')">Excluir</button></div></div>`).join("")||`<div class="empty">Nenhum produto cadastrado.</div>`;
  const dl=document.getElementById("clientSuggestions");if(dl)dl.innerHTML=data.clients.map(c=>`<option value="${esc(c.name)}">${esc(c.phone)}</option>`).join("");
  const cl=document.getElementById("clientsList");if(cl)cl.innerHTML=data.clients.slice().sort((a,b)=>String(a.name).localeCompare(String(b.name),"pt-BR")).map(c=>`<div class="item"><div><strong>${esc(c.name)}</strong><small>📲 ${esc(c.phone)}${c.address?" • "+esc(c.address):""}${c.note?"<br>"+esc(c.note):""}</small></div><div class="actions"><button class="secondary" style="padding:7px 9px;font-size:11px" onclick="editClient('${esc(c.id)}')">Editar</button><button class="danger" style="padding:7px 9px;font-size:11px" onclick="deleteClient('${esc(c.id)}')">Excluir</button></div></div>`).join("")||`<div class="empty">Nenhum cliente cadastrado.</div>`;
 
