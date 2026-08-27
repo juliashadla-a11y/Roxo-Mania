@@ -133,7 +133,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <div class="card"><form onsubmit="saveProduction(event)"><div class="field"><label>Quantidade produzida</label><input id="productionQty" type="number" min="1" required></div><div class="field"><label>Observação</label><input id="productionNote" type="text" placeholder="Ex.: produção da manhã"></div><button class="primary" type="submit">📦 Salvar produção</button></form></div>
 <div style="height:12px"></div><div class="card"><h3 style="margin-bottom:8px">🥤 Retirada para consumo próprio</h3><p class="mini">Use quando retirar uma garrafinha do estoque para você ou para consumo da família. Ela sai do estoque, mas não entra como venda nem movimenta o caixa.</p><form onsubmit="addStockWithdrawal(event)"><div class="row"><div class="field"><label>Quantidade</label><input id="withdrawalQty" type="number" min="1" step="1" required></div><div class="field"><label>Observação</label><input id="withdrawalNote" type="text" placeholder="Ex.: tomei uma garrafinha"></div></div><button class="secondary" type="submit">🥤 Registrar retirada</button></form></div>
 <div style="height:14px"></div><div class="grid"><div class="card"><div class="label">Estoque disponível</div><div class="value purple" id="productionStock">0</div></div><div class="card"><div class="label">Produção registrada hoje</div><div class="value purple" id="productionToday">0</div></div><div class="card full"><div class="label">Produção total</div><div class="value purple" id="productionTotal">0</div></div></div>
-<div style="height:14px"></div><div class="card"><h3 style="margin-bottom:6px">Histórico de produção</h3><div class="mini" style="margin-bottom:12px">Edite ou apague qualquer produção ou retirada. O estoque é recalculado automaticamente.</div><div id="productionList" class="list"></div></div>
+<div style="height:14px"></div><div class="card"><h3 style="margin-bottom:6px">Histórico de produção</h3><div class="field" style="margin-bottom:10px"><label>Mês do histórico</label><select id="productionMonth" onchange="render()"></select></div><div class="mini" style="margin-bottom:12px">Consulte as produções e retiradas de qualquer mês. Edite ou apague qualquer registro; o estoque continua sendo recalculado automaticamente.</div><div id="productionList" class="list"></div></div>
 </section>
 
 <section id="cash">
@@ -407,6 +407,7 @@ let data=loadData();ensureProductCatalog();lockSeptemberInventoryOnce();data.set
   data.settings.v32SeptemberStarted=true;
 })();
 save();
+
 let editingSaleId=null;
 let editingProductId=null;
 let editingCashId=null;
@@ -532,11 +533,8 @@ function addSale(e){
  else data.clients.push({id:"c"+Date.now(),name:customerName,phone:customerPhone,address,note});
  const saleDescription=`Venda • ${customerName} • ${items.map(i=>i.name).join(", ")} • ${payment}`;
  const cashEntry=data.cash.find(x=>x.saleId===sale.id&&x.kind!=="delivery");
- const currentCash=getCashDay(today());
- if(currentCash?.opened&&!currentCash.closed){
-   if(cashEntry){cashEntry.date=date;cashEntry.value=total;cashEntry.description=saleDescription;cashEntry.kind="sale";}
-   else data.cash.push({id:Date.now()+1,date,type:"Entrada",value:total,description:saleDescription,saleId:sale.id,kind:"sale"});
- }
+ if(cashEntry){cashEntry.date=date;cashEntry.value=total;cashEntry.description=saleDescription;cashEntry.kind="sale";}
+ else data.cash.push({id:Date.now()+1,date,type:"Entrada",value:total,description:saleDescription,saleId:sale.id,kind:"sale",createdAt:new Date().toISOString()});
  // A taxa de entrega faz parte do faturamento e do caixa.
  // Como o entregador é da família, não lançamos uma saída automática para a entrega.
  data.cash=data.cash.filter(x=>!(x.saleId===sale.id&&x.kind==="delivery"));
@@ -610,8 +608,6 @@ function deleteClient(id){
 }
 function addCash(e){
  e.preventDefault();
- const day=getCashDay(today());
- if(!day?.opened||day.closed){alert("Abra o caixa antes de registrar uma movimentação. 💜");return}
  const type=cashType.value,value=Number(cashValue.value),description=cashDescription.value.trim();
  if(!value){alert("Informe um valor válido.");return}
  if(editingCashId){
@@ -623,7 +619,7 @@ function addCash(e){
    const cancel=document.getElementById("cancelCashEditBtn");if(cancel)cancel.style.display="none";
    save();e.target.reset();render();alert("Movimentação atualizada! 💜");return;
  }
- data.cash.push({id:Date.now(),date:today(),type,value,description:description||"Movimentação"});
+ data.cash.push({id:Date.now(),date:today(),type,value,description:description||"Movimentação",createdAt:new Date().toISOString()});
  save();e.target.reset();render();alert("Movimentação registrada! 💰");
 }
 function editCash(id){
@@ -657,7 +653,7 @@ function separateProfit(e){
  if(!day?.opened||day.closed){alert(`Abra o caixa de ${dateBR(d)} antes de separar o lucro. 💚`);return}
  const available=currentDayCashAvailable();
  if(value>available){alert(`O valor informado (${brl(value)}) é maior que o saldo disponível para separar (${brl(available)}).`);return}
- data.cash.push({id:Date.now(),date:d,type:"Saída",value,description,kind:"profit_withdrawal"});
+ data.cash.push({id:Date.now(),date:d,type:"Saída",value,description,kind:"profit_withdrawal",createdAt:new Date().toISOString()});
  save();e.target.reset();render();alert(`Lucro de ${brl(value)} separado do caixa de ${dateBR(d)}. 💚`);
 }
 function addProfitExpense(e){
@@ -666,7 +662,7 @@ function addProfitExpense(e){
  if(!value||value<0){alert("Informe um valor válido.");return}
  const available=calculateProfitAvailable();
  if(value>available){alert(`O valor informado (${brl(value)}) é maior que o lucro disponível (${brl(available)}).`);return}
- data.cash.push({id:Date.now(),date:today(),type:"Saída",value,description,kind:"profit_expense"});
+ data.cash.push({id:Date.now(),date:today(),type:"Saída",value,description,kind:"profit_expense",createdAt:new Date().toISOString()});
  save();e.target.reset();render();alert(`Saída de ${brl(value)} registrada no lucro. 💳`);
 }
 function calculateProfitAvailable(){
@@ -738,6 +734,8 @@ function addStockWithdrawal(e){
   const available=stock();
   if(qty>available){alert(`Você tem apenas ${available} garrafinha(s) disponível(is) no estoque.`);return}
   data.stockWithdrawals.push({id:Date.now(),date:today(),qty,note});
+  const productionMonthEl=document.getElementById("productionMonth");
+  if(productionMonthEl) productionMonthEl.value=monthKey(today());
   save();e.target.reset();render();alert(`${qty} garrafinha(s) retirada(s) do estoque. 🥤`);
 }
 function editStockWithdrawal(id){
@@ -764,6 +762,8 @@ function saveProduction(e){
     save();render();alert("Produção atualizada! 📦");return;
   }
   data.production.push({id:Date.now(),date:today(),qty,note});
+  const productionMonthEl=document.getElementById("productionMonth");
+  if(productionMonthEl) productionMonthEl.value=monthKey(today());
   save();e.target.reset();render();alert("Produção salva e adicionada ao estoque! 📦");
 }
 function editProduction(id){
@@ -800,6 +800,20 @@ function startNewMonth(){
   save();render();
   alert("Controle de setembro iniciado! 💜\n\nA partir de agora, os novos registros serão lançados em setembro.");
 }
+function productionMonths(){const set=new Set([today().slice(0,7)]);(data.production||[]).forEach(x=>{const m=monthKey(x.date);if(/^\d{4}-\d{2}$/.test(m))set.add(m)});(data.stockWithdrawals||[]).forEach(x=>{const m=monthKey(x.date);if(/^\d{4}-\d{2}$/.test(m))set.add(m)});return [...set].sort().reverse()}
+function selectedProductionMonth(){return document.getElementById("productionMonth")?.value||today().slice(0,7)}
+function renderProductionMonthOptions(){const el=document.getElementById("productionMonth");if(!el)return;const current=el.value||today().slice(0,7);const months=productionMonths();el.innerHTML=months.map(m=>`<option value="${m}">${esc(monthLabel(m))}</option>`).join("");el.value=months.includes(current)?current:months[0]||today().slice(0,7)}
+function renderProductionHistory(){
+  const list=document.getElementById("productionList"); if(!list)return;
+  renderProductionMonthOptions();
+  const month=selectedProductionMonth();
+  const productions=(data.production||[]).filter(x=>monthKey(x.date)===month).slice().reverse().slice(0,100);
+  const withdrawals=(data.stockWithdrawals||[]).filter(x=>monthKey(x.date)===month).slice().reverse().slice(0,100);
+  const productionHTML=productions.map(x=>`<div class="item"><div><strong>📦 ${Number(x.qty||0)} garrafinha(s)</strong><small>${dateBR(x.date)}${x.note?" • "+esc(x.note):""}</small></div><div class="actions"><span class="badge purple">+${Number(x.qty||0)}</span><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editProduction(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteProduction(${x.id})">🗑️ Apagar</button></div></div>`).join("");
+  const withdrawalHTML=withdrawals.map(x=>`<div class="item"><div><strong>🥤 ${Number(x.qty||0)} garrafinha(s) — consumo próprio</strong><small>${dateBR(x.date)}${x.note?" • "+esc(x.note):""}</small></div><div class="actions"><span class="badge red">-${Number(x.qty||0)}</span><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editStockWithdrawal(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteStockWithdrawal(${x.id})">🗑️ Apagar</button></div></div>`).join("");
+  if(productionHTML||withdrawalHTML) list.innerHTML=productionHTML+((productionHTML&&withdrawalHTML)?'<div style="height:8px"></div>':"")+withdrawalHTML;
+  else list.innerHTML=`<div class="empty">Nenhuma movimentação de estoque registrada em ${esc(monthLabel(month))}.</div>`;
+}
 function reportMonths(){const set=new Set([today().slice(0,7)]);data.sales.forEach(x=>{const m=monthKey(x.date);if(/^\d{4}-\d{2}$/.test(m))set.add(m)});return [...set].sort().reverse()}
 function monthLabel(m){if(m==="all")return "Todo o período";const [y,mo]=m.split("-").map(Number);return new Date(y,mo-1,1).toLocaleDateString("pt-BR",{month:"long",year:"numeric"}).replace(/^./,c=>c.toUpperCase())}
 function selectedReportMonth(){const el=document.getElementById("reportMonth");return el?.value||today().slice(0,7)}
@@ -809,8 +823,13 @@ function importBackup(e){const f=e.target.files?.[0];if(!f)return;const r=new Fi
 function monthKey(d){return String(d||"").slice(0,7)}
 function salesProfit(list){return list.reduce((a,s)=>a+Number(s.subtotal??s.total??0)-Number(s.costTotal||s.items?.reduce((z,i)=>z+i.cost*i.qty,0)||0),0)}
 function businessRevenue(list){return list.reduce((a,s)=>a+Number(s.total??s.subtotal??0),0)}
+function cashEntriesForDay(date=today()){
+ const day=data.cashDays?.[date];
+ const openedAt=day?.openedAt?new Date(day.openedAt).getTime():null;
+ return (data.cash||[]).filter(x=>x.date===date && (!openedAt || (x.createdAt && new Date(x.createdAt).getTime()>=openedAt)));
+}
 function getCashDay(date=today()){return data.cashDays[date]||null}
-function cashDayTotals(date=today()){const list=data.cash.filter(x=>x.date===date);return {in:list.filter(x=>x.type==="Entrada").reduce((a,x)=>a+Number(x.value||0),0),out:list.filter(x=>x.type==="Saída"&&x.kind!=="profit_expense"&&x.kind!=="profit_to_capital").reduce((a,x)=>a+Number(x.value||0),0)}}
+function cashDayTotals(date=today()){const list=cashEntriesForDay(date);return {in:list.filter(x=>x.type==="Entrada").reduce((a,x)=>a+Number(x.value||0),0),out:list.filter(x=>x.type==="Saída"&&x.kind!=="profit_expense"&&x.kind!=="profit_to_capital").reduce((a,x)=>a+Number(x.value||0),0)}}
 function getPreviousClosedCashDay(date=today()){
  const keys=Object.keys(data.cashDays).filter(k=>k<date && data.cashDays[k]?.opened&&data.cashDays[k]?.closed).sort();
  if(!keys.length)return null;
@@ -827,6 +846,7 @@ function openCash(){
  const opening=moneyInput(raw);
  if(!Number.isFinite(opening)||opening<0){alert("Informe um valor válido. Digite apenas o número, por exemplo: 50 ou 50,00.");return}
  data.cashDays[d]={opened:true,opening,openedAt:new Date().toISOString(),closed:false,openingFromPrevious:!!previous};
+ cashViewDate=d;
  save();render();alert(`Caixa aberto com ${brl(opening)}. 💜`);
 }
 
@@ -839,7 +859,7 @@ function editOpeningCash(){
  if(!Number.isFinite(opening)||opening<0){alert("Informe um valor válido. Digite apenas o número, por exemplo: 50 ou 50,00.");return}
  day.opening=opening;
  if(day.closed){
-   const totals=cashDayTotals(d),daySales=data.sales.filter(x=>x.date===d),profitToSeparate=data.cash.filter(x=>x.date===d&&x.kind==="profit_withdrawal").reduce((a,x)=>a+x.value,0);
+   const totals=cashDayTotals(d),daySales=data.sales.filter(x=>x.date===d),profitToSeparate=cashEntriesForDay(d).filter(x=>x.kind==="profit_withdrawal").reduce((a,x)=>a+x.value,0);
    day.expected=opening+totals.in-totals.out;
    day.expected=Math.max(0,day.expected);
    day.difference=Number(day.counted||0)-day.expected;
@@ -852,7 +872,7 @@ function closeCash(){
   if(!day?.opened){alert("Abra o caixa antes de fechá-lo. 💜");return}
   if(day.closed){alert("O caixa de hoje já está fechado.");return}
   const totals=cashDayTotals(d),expected=Number(day.opening||0)+totals.in-totals.out;
-  const raw=prompt(`Saldo esperado no fechamento: ${brl(expected)}\n\nConte o dinheiro que ficou no caixa e informe quanto encontrou:`,Number(expected).toFixed(2));
+  const raw=prompt(`Saldo esperado no fechamento (já considerando o lucro que você separou): ${brl(expected)}\n\nConte o dinheiro que ficou no caixa e informe quanto encontrou:`,Number(expected).toFixed(2));
   if(raw===null)return;
   const counted=Number(String(raw).replace(/\./g,"").replace(",","."));
   if(!Number.isFinite(counted)||counted<0){alert("Informe um valor válido.");return}
@@ -862,7 +882,7 @@ function closeCash(){
 }
 
 
-function selectedCashDate(){return cashViewDate||today();}
+function selectedCashDate(){return cashViewDate && data.cashDays?.[cashViewDate]?.opened ? cashViewDate : today();}
 function enterHistoricalCash(date){
   if(!data.cashDays[date]){alert("Esse caixa não está registrado.");return}
   cashViewDate=date;
@@ -875,7 +895,7 @@ function leaveHistoricalCash(){cashViewDate=null;render();}
 function currentDayCashAvailable(){
  const d=selectedCashDate(),day=getCashDay(d);
  if(!day?.opened)return 0;
- const list=data.cash.filter(x=>x.date===d);
+ const list=cashEntriesForDay(d);
  const cin=list.filter(x=>x.type==="Entrada").reduce((a,x)=>a+Number(x.value||0),0);
  const cout=list.filter(x=>x.type==="Saída" && x.kind!=="profit_withdrawal" && x.kind!=="profit_expense" && x.kind!=="profit_to_capital").reduce((a,x)=>a+Number(x.value||0),0);
  const sep=list.filter(x=>x.kind==="profit_withdrawal").reduce((a,x)=>a+Number(x.value||0),0);
@@ -1014,7 +1034,7 @@ const cashDaysHTML=Object.entries(data.cashDays||{}).sort(([a],[b])=>b.localeCom
 const editableCashHistory=document.getElementById("editableCashHistory");
 if(editableCashHistory) editableCashHistory.innerHTML=cashDaysHTML || '<div class="empty">Nenhum caixa anterior registrado.</div>';
 
- const t=today(),ts=data.sales.filter(x=>x.date===t),revenue=businessRevenue(ts),qty=ts.reduce((a,x)=>a+x.qty,0),prod=data.production.filter(x=>x.date===t).reduce((a,x)=>a+x.qty,0),goal=Number(data.settings.goal)||0,pct=goal?Math.min(100,Math.round(revenue/goal*100)):0;
+ const t=today(),ts=data.sales.filter(x=>x.date===t),revenue=businessRevenue(ts),qty=ts.reduce((a,s)=>a+(s.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0),prod=data.production.filter(x=>x.date===t).reduce((a,x)=>a+x.qty,0),goal=Number(data.settings.goal)||0,pct=goal?Math.min(100,Math.round(revenue/goal*100)):0;
  const thisMonth=monthKey(t),ms=data.sales.filter(x=>monthKey(x.date)===thisMonth),monthRev=businessRevenue(ms),todayProfitValue=salesProfit(ts),monthProfitValue=salesProfit(ms),wc=workingCapital(),wcGoal=Number(data.settings.workingCapitalGoal)||0;
  todayText.textContent=new Date(today()+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"});todayRevenue.textContent=brl(revenue);todayQty.textContent=qty;goalValue.textContent=brl(goal);productionValue.textContent=prod;const tp=document.getElementById("todayProfit");if(tp)tp.textContent=brl(todayProfitValue);const mp=document.getElementById("monthProfit");if(mp)mp.textContent=brl(monthProfitValue);const mps=document.getElementById("monthProfitSales");if(mps)mps.textContent=brl(monthProfitValue);workingCapital.textContent=brl(wc);goalPercent.textContent=pct+"%";goalBar.style.width=pct+"%";
  const st=stock();stockValue.textContent=st;productionStock.textContent=st;stockBadge.textContent=st<=0?"sem estoque":st<=Number(data.settings.lowStock||0)?"estoque baixo":"disponíveis";stockBadge.className="badge "+stockClass(st);stockNotice.textContent=st<=0?"⚠️ Estoque zerado. Registre uma produção antes de vender.":st<=Number(data.settings.lowStock||0)?`⚠️ Estoque baixo: restam ${st} garrafinha(s).`:"💜 Estoque calculado automaticamente: produção + estoque inicial − vendas.";saleStockInfo.textContent=`Estoque disponível agora: ${st} garrafinha(s)`;const defaultPriceNotice=document.getElementById("defaultPriceNotice");if(defaultPriceNotice)defaultPriceNotice.textContent=brl(data.settings.price);
@@ -1032,14 +1052,16 @@ if(editableCashHistory) editableCashHistory.innerHTML=cashDaysHTML || '<div clas
   todaySalesList.innerHTML=todayHTML||`<div class="empty">Nenhuma venda hoje. 💜</div>`;
   allSalesList.innerHTML=saleHTML||`<div class="empty">Nenhum pedido registrado ainda.</div>`;
  productionTotal.textContent=totalProduced();productionToday.textContent=prod;
- const productionHTML=data.production.slice().reverse().slice(0,50).map(x=>`<div class="item"><div><strong>📦 ${x.qty} garrafinha(s)</strong><small>${dateBR(x.date)}${x.note?" • "+esc(x.note):""}</small></div><div class="actions"><span class="badge purple">+${x.qty}</span><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editProduction(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteProduction(${x.id})">🗑️ Apagar</button></div></div>`).join("");
-  const withdrawalHTML=data.stockWithdrawals.slice().reverse().slice(0,50).map(x=>`<div class="item"><div><strong>🥤 ${x.qty} garrafinha(s) — consumo próprio</strong><small>${dateBR(x.date)}${x.note?" • "+esc(x.note):""}</small></div><div class="actions"><span class="badge red">-${x.qty}</span><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editStockWithdrawal(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteStockWithdrawal(${x.id})">🗑️ Apagar</button></div></div>`).join("");
-  productionList.innerHTML=(productionHTML||"")+((productionHTML&&withdrawalHTML)?'<div style="height:8px"></div>':"")+withdrawalHTML||`<div class="empty">Nenhuma movimentação de estoque registrada.</div>`;
+ renderProductionMonthOptions();
+ const productionMonth=selectedProductionMonth();
+ const productionHTML=data.production.filter(x=>monthKey(x.date)===productionMonth).slice().reverse().slice(0,100).map(x=>`<div class="item"><div><strong>📦 ${x.qty} garrafinha(s)</strong><small>${dateBR(x.date)}${x.note?" • "+esc(x.note):""}</small></div><div class="actions"><span class="badge purple">+${x.qty}</span><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editProduction(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteProduction(${x.id})">🗑️ Apagar</button></div></div>`).join("");
+  const withdrawalHTML=data.stockWithdrawals.filter(x=>monthKey(x.date)===productionMonth).slice().reverse().slice(0,100).map(x=>`<div class="item"><div><strong>🥤 ${x.qty} garrafinha(s) — consumo próprio</strong><small>${dateBR(x.date)}${x.note?" • "+esc(x.note):""}</small></div><div class="actions"><span class="badge red">-${x.qty}</span><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editStockWithdrawal(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteStockWithdrawal(${x.id})">🗑️ Apagar</button></div></div>`).join("");
+  renderProductionHistory();
  const cashDate=selectedCashDate(),cashDay=getCashDay(cashDate),cashTotals=cashDayTotals(cashDate);
  const cin=cashTotals.in;
- const regularOut=data.cash.filter(x=>x.date===cashDate&&x.type==="Saída"&&x.kind!=="profit_withdrawal"&&x.kind!=="profit_expense"&&x.kind!=="profit_to_capital").reduce((a,x)=>a+Number(x.value||0),0);
- const profitSeparatedToday=data.cash.filter(x=>x.date===cashDate&&x.kind==="profit_withdrawal").reduce((a,x)=>a+Number(x.value||0),0);
- const profitSpentToday=data.cash.filter(x=>x.date===cashDate&&x.kind==="profit_expense").reduce((a,x)=>a+Number(x.value||0),0);
+ const regularOut=cashEntriesForDay(cashDate).filter(x=>x.type==="Saída"&&x.kind!=="profit_withdrawal"&&x.kind!=="profit_expense"&&x.kind!=="profit_to_capital").reduce((a,x)=>a+Number(x.value||0),0);
+ const profitSeparatedToday=cashEntriesForDay(cashDate).filter(x=>x.kind==="profit_withdrawal").reduce((a,x)=>a+Number(x.value||0),0);
+ const profitSpentToday=cashEntriesForDay(cashDate).filter(x=>x.kind==="profit_expense").reduce((a,x)=>a+Number(x.value||0),0);
  cashIn.textContent=brl(cin);cashOut.textContent=brl(regularOut);const cps=document.getElementById("cashProfitSeparatedToday");if(cps)cps.textContent=brl(profitSeparatedToday);const pav=document.getElementById("profitAvailable");if(pav)pav.textContent=brl(calculateProfitAvailable());cashBalance.textContent=brl(currentDayCashAvailable());
  const wcBalance=workingCapital(),wcGoalCash=Number(data.settings.workingCapitalGoal)||0,wcGap=Math.max(0,wcGoalCash-wcBalance);
  const cwc=document.getElementById("cashWorkingCapital"),cwg=document.getElementById("cashWorkingCapitalGoal"),cgap=document.getElementById("cashWorkingCapitalGap");
@@ -1076,6 +1098,30 @@ function renderClientsOnly(){
 }
 renderClientsOnly();
 renderProductCatalogOnly();
+
+// Histórico de produção isolado: renderiza mesmo se outra parte do painel falhar.
+function renderProductionHistoryOnly(){
+  try{
+    const list=document.getElementById("productionList");
+    if(!list)return;
+    const select=document.getElementById("productionMonth");
+    const current=select?.value||today().slice(0,7);
+    const months=productionMonths();
+    if(select){
+      select.innerHTML=months.map(m=>`<option value="${m}">${esc(monthLabel(m))}</option>`).join("");
+      select.value=months.includes(current)?current:(months[0]||today().slice(0,7));
+    }
+    const month=select?.value||today().slice(0,7);
+    const productions=(data.production||[]).filter(x=>monthKey(x.date)===month).slice().reverse();
+    const withdrawals=(data.stockWithdrawals||[]).filter(x=>monthKey(x.date)===month).slice().reverse();
+    const rows=[
+      ...productions.map(x=>({date:x.date,html:`<div class="item"><div><strong>📦 ${Number(x.qty||0)} garrafinha(s) produzidas</strong><small>${dateBR(x.date)}${x.note?" • "+esc(x.note):""}</small></div><div class="actions"><span class="badge purple">+${Number(x.qty||0)}</span><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editProduction(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteProduction(${x.id})">🗑️ Apagar</button></div></div>`})),
+      ...withdrawals.map(x=>({date:x.date,html:`<div class="item"><div><strong>🥤 ${Number(x.qty||0)} garrafinha(s) — consumo próprio</strong><small>${dateBR(x.date)}${x.note?" • "+esc(x.note):""}</small></div><div class="actions"><span class="badge red">-${Number(x.qty||0)}</span><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editStockWithdrawal(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteStockWithdrawal(${x.id})">🗑️ Apagar</button></div></div>`}))
+    ].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+    list.innerHTML=rows.map(r=>r.html).join("")||`<div class="empty">Nenhuma movimentação de estoque registrada em ${esc(monthLabel(month))}.</div>`;
+  }catch(e){console.error("Falha no histórico de produção",e);}
+}
+renderProductionHistoryOnly();
 </script>
 
 <script>
