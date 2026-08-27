@@ -436,7 +436,25 @@ function save(){localStorage.setItem(KEY,JSON.stringify(data))}
 function realToday(){const d=new Date();const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),day=String(d.getDate()).padStart(2,"0");return `${y}-${m}-${day}`}
 function today(){return data?.settings?.businessDate||realToday()}
 function dateBR(d){return d?new Date(d+"T12:00:00").toLocaleDateString("pt-BR"):""}
-function showTab(id){document.querySelectorAll("main > section").forEach(s=>s.classList.remove("show"));const target=document.getElementById(id);if(target)target.classList.add("show");document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));const n=document.getElementById("n-"+id);if(n)n.classList.add("active");render();window.scrollTo({top:0,behavior:"smooth"})}
+function showTab(id){
+  if(id==="cash"){
+    const todayCash=data.cashDays?.[today()];
+    if(todayCash?.opened && !todayCash?.closed){
+      cashViewDate=today();
+    }else if(!cashViewDate || !data.cashDays?.[cashViewDate]?.opened){
+      const openDays=Object.entries(data.cashDays||{}).filter(([d,day])=>day?.opened&&!day?.closed).sort(([a],[b])=>b.localeCompare(a));
+      cashViewDate=openDays.length?openDays[0][0]:today();
+    }
+  }
+  document.querySelectorAll("main > section").forEach(s=>s.classList.remove("show"));
+  const target=document.getElementById(id);
+  if(target)target.classList.add("show");
+  document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));
+  const n=document.getElementById("n-"+id);
+  if(n)n.classList.add("active");
+  render();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
 function normalizeWhatsApp(phone){let d=String(phone||"").replace(/\D/g,"");if(d.startsWith("00"))d=d.slice(2);if(d.startsWith("55"))return d;if(d.length===10||d.length===11)return"55"+d;return""}
 function productById(id){return data.products.find(p=>p.id===id)}
 function activeProducts(){return data.products.filter(p=>p.active!==false)}
@@ -892,33 +910,7 @@ function enterHistoricalCash(date){
 }
 function leaveHistoricalCash(){cashViewDate=null;render();}
 
-// Captura o toque/clique no botão de entrada antes de qualquer outro handler.
-document.addEventListener("click",function(e){
-  const btn=e.target && e.target.closest ? e.target.closest("[data-enter-cash]") : null;
-  if(!btn)return;
-  const date=btn.getAttribute("data-enter-cash");
-  if(!date || !data.cashDays?.[date]) return;
-  e.preventDefault();
-  e.stopImmediatePropagation();
-  enterHistoricalCash(date);
-},true);
-
-// Usa o evento de clique normal (não pointerdown). O pointerdown anterior
-// re-renderizava a lista antes do Safari concluir o toque, fazendo o botão
-// parecer sem resposta. A delegação de click mantém o botão estável até a ação.
-document.addEventListener("click",function(e){
-  const btn=e.target?.closest?.("[data-enter-cash]");
-  if(!btn)return;
-  const date=btn.getAttribute("data-enter-cash");
-  if(!date || !data.cashDays?.[date]){alert("Esse caixa não está registrado.");return;}
-  e.preventDefault();
-  e.stopPropagation();
-  cashViewDate=date;
-  showTab("cash");
-},false);
-
-// Entrada robusta no caixa pelo histórico: usa delegação de evento para não depender
-// do onclick inline depois que o histórico é re-renderizado.
+// A entrada pelo histórico agora usa a própria navegação da aba Caixa.
 function enterCashFromHistoryButton(btn){
   const date=btn?.getAttribute?.("data-enter-cash");
   if(!date || !data.cashDays?.[date]){alert("Esse caixa não está registrado.");return false;}
@@ -1087,7 +1079,7 @@ function renderReportMonthOptions(){const el=document.getElementById("reportMont
 
 function render(){
 
-const cashDaysHTML=Object.entries(data.cashDays||{}).sort(([a],[b])=>b.localeCompare(a)).map(([date,day])=>`<div class="item"><div><strong>💰 Caixa — ${dateBR(date)}</strong><small>Abertura: ${brl(day.opening||0)} • ${day.closed?`Fechamento: ${brl(day.counted||0)} • Esperado: ${brl(day.expected||0)} • Diferença: ${brl(day.difference||0)}`:"Ainda aberto"}</small></div><div class="actions"><span class="badge purple">${day.closed?"Fechado":"Aberto"}</span>${day.closed?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="reopenCashDay('${date}')">🔓 Reabrir</button>`:`<button class="primary" style="padding:6px 8px;font-size:11px" onclick="closeHistoricalCash('${date}')">🔒 Fechar agora</button>`}<button type="button" class="primary enter-cash-btn" data-enter-cash="${date}" onclick="enterHistoricalCash('${date}');return false;" ontouchend="enterHistoricalCash('${date}');return false;" style="padding:6px 8px;font-size:11px;position:relative;z-index:9999;pointer-events:auto;cursor:pointer;touch-action:manipulation">👁️ Entrar</button><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editCashDay('${date}')">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteCashDay('${date}')">🗑️ Apagar</button></div></div>`).join("");
+const cashDaysHTML=Object.entries(data.cashDays||{}).sort(([a],[b])=>b.localeCompare(a)).map(([date,day])=>`<div class="item"><div><strong>💰 Caixa — ${dateBR(date)}</strong><small>Abertura: ${brl(day.opening||0)} • ${day.closed?`Fechamento: ${brl(day.counted||0)} • Esperado: ${brl(day.expected||0)} • Diferença: ${brl(day.difference||0)}`:"Ainda aberto"}</small></div><div class="actions"><span class="badge purple">${day.closed?"Fechado":"Aberto"}</span>${day.closed?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="reopenCashDay('${date}')">🔓 Reabrir</button>`:`<button class="primary" style="padding:6px 8px;font-size:11px" onclick="closeHistoricalCash('${date}')">🔒 Fechar agora</button>`}<button type="button" class="primary enter-cash-btn" data-enter-cash="${date}" onclick="cashViewDate='${date}';showTab('cash');return false;" style="padding:6px 8px;font-size:11px;position:relative;z-index:9999;pointer-events:auto;cursor:pointer;touch-action:manipulation">👁️ Entrar</button><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editCashDay('${date}')">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteCashDay('${date}')">🗑️ Apagar</button></div></div>`).join("");
 const editableCashHistory=document.getElementById("editableCashHistory");
 if(editableCashHistory) editableCashHistory.innerHTML=cashDaysHTML || '<div class="empty">Nenhum caixa anterior registrado.</div>';
 
