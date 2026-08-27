@@ -175,7 +175,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <button id="n-reports" onclick="showTab('reports')"><span class="nav-icon">📊</span>Relatório</button>
 <button id="n-profit" onclick="showTab('profit')"><span class="nav-icon">💚</span>Lucro</button>
 <button id="n-production" onclick="showTab('production')"><span class="nav-icon">📦</span>Produção</button>
-<button id="n-cash" onclick="showTab('cash')"><span class="nav-icon">💵</span>Caixa</button>
+<button id="n-cash" type="button" onclick="openCashScreen()"><span class="nav-icon">💵</span>Caixa</button>
 </nav>
 
 <script>
@@ -436,6 +436,28 @@ function save(){localStorage.setItem(KEY,JSON.stringify(data))}
 function realToday(){const d=new Date();const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),day=String(d.getDate()).padStart(2,"0");return `${y}-${m}-${day}`}
 function today(){return data?.settings?.businessDate||realToday()}
 function dateBR(d){return d?new Date(d+"T12:00:00").toLocaleDateString("pt-BR"):""}
+function openCashScreen(date=null){
+  try{
+    const openDays=Object.entries(data.cashDays||{}).filter(([d,day])=>day?.opened&&!day?.closed).sort(([a],[b])=>b.localeCompare(a));
+    const requested=date && data.cashDays?.[date]?.opened ? date : null;
+    const todayDay=data.cashDays?.[today()];
+    const active=requested || (todayDay?.opened&&!todayDay?.closed ? today() : (openDays[0]?.[0]||today()));
+    cashViewDate=active;
+    document.querySelectorAll('main > section').forEach(s=>s.classList.remove('show'));
+    const target=document.getElementById('cash');
+    if(!target) return;
+    target.classList.add('show');
+    document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+    const n=document.getElementById('n-cash'); if(n)n.classList.add('active');
+    render();
+    window.scrollTo(0,0);
+  }catch(e){
+    console.error('Erro ao abrir o caixa:',e);
+    const target=document.getElementById('cash');
+    if(target){document.querySelectorAll('main > section').forEach(s=>s.classList.remove('show'));target.classList.add('show');}
+    const n=document.getElementById('n-cash'); if(n){document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));n.classList.add('active');}
+  }
+}
 function showTab(id){
   if(id==="cash"){
     const todayCash=data.cashDays?.[today()];
@@ -903,8 +925,7 @@ function closeCash(){
 function selectedCashDate(){return cashViewDate && data.cashDays?.[cashViewDate]?.opened ? cashViewDate : today();}
 function enterHistoricalCash(date){
   if(!data.cashDays[date]){alert("Esse caixa não está registrado.");return}
-  cashViewDate=date;
-  showTab("cash");
+  openCashScreen(date);
   window.scrollTo({top:0,behavior:"smooth"});
   render();
 }
@@ -1079,7 +1100,7 @@ function renderReportMonthOptions(){const el=document.getElementById("reportMont
 
 function render(){
 
-const cashDaysHTML=Object.entries(data.cashDays||{}).sort(([a],[b])=>b.localeCompare(a)).map(([date,day])=>`<div class="item"><div><strong>💰 Caixa — ${dateBR(date)}</strong><small>Abertura: ${brl(day.opening||0)} • ${day.closed?`Fechamento: ${brl(day.counted||0)} • Esperado: ${brl(day.expected||0)} • Diferença: ${brl(day.difference||0)}`:"Ainda aberto"}</small></div><div class="actions"><span class="badge purple">${day.closed?"Fechado":"Aberto"}</span>${day.closed?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="reopenCashDay('${date}')">🔓 Reabrir</button>`:`<button class="primary" style="padding:6px 8px;font-size:11px" onclick="closeHistoricalCash('${date}')">🔒 Fechar agora</button>`}<button type="button" class="primary enter-cash-btn" data-enter-cash="${date}" onclick="cashViewDate='${date}';showTab('cash');return false;" style="padding:6px 8px;font-size:11px;position:relative;z-index:9999;pointer-events:auto;cursor:pointer;touch-action:manipulation">👁️ Entrar</button><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editCashDay('${date}')">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteCashDay('${date}')">🗑️ Apagar</button></div></div>`).join("");
+const cashDaysHTML=Object.entries(data.cashDays||{}).sort(([a],[b])=>b.localeCompare(a)).map(([date,day])=>`<div class="item"><div><strong>💰 Caixa — ${dateBR(date)}</strong><small>Abertura: ${brl(day.opening||0)} • ${day.closed?`Fechamento: ${brl(day.counted||0)} • Esperado: ${brl(day.expected||0)} • Diferença: ${brl(day.difference||0)}`:"Ainda aberto"}</small></div><div class="actions"><span class="badge purple">${day.closed?"Fechado":"Aberto"}</span>${day.closed?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="reopenCashDay('${date}')">🔓 Reabrir</button>`:`<button class="primary" style="padding:6px 8px;font-size:11px" onclick="closeHistoricalCash('${date}')">🔒 Fechar agora</button>`}<button type="button" class="primary enter-cash-btn" data-enter-cash="${date}" onclick="openCashScreen('${date}');return false;" style="padding:6px 8px;font-size:11px;position:relative;z-index:9999;pointer-events:auto;cursor:pointer;touch-action:manipulation">👁️ Entrar</button><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editCashDay('${date}')">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteCashDay('${date}')">🗑️ Apagar</button></div></div>`).join("");
 const editableCashHistory=document.getElementById("editableCashHistory");
 if(editableCashHistory) editableCashHistory.innerHTML=cashDaysHTML || '<div class="empty">Nenhum caixa anterior registrado.</div>';
 
