@@ -140,7 +140,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <h2>💵 Caixa</h2>
 
 <div style="height:12px"></div>
-<div class="card"><div class="total"><div><div class="label">📅 Caixa de hoje</div><h3 id="cashDayStatus">Caixa fechado</h3><div class="mini" id="cashDayInfo">Abra o caixa para registrar o saldo inicial.</div></div><span id="cashDayIcon">🔒</span></div><div class="actions"><button id="openCashBtn" class="primary" type="button" onclick="openCash()">🔓 Abrir caixa</button><button id="editOpeningCashBtn" class="secondary" type="button" onclick="editOpeningCash()" style="display:none">✏️ Editar saldo inicial</button><button id="closeCashBtn" class="secondary" type="button" onclick="closeCash()" style="display:none">🔒 Fechar caixa</button></div></div>
+<div class="card"><div class="total"><div><div class="label">📅 Caixa de hoje</div><h3 id="cashDayStatus">Caixa fechado</h3><div class="mini" id="cashDayInfo">Abra o caixa para registrar o saldo inicial.</div></div><span id="cashDayIcon">🔒</span></div><div class="actions"><button id="openCashBtn" class="primary" type="button" onclick="openCash()">🔓 Abrir caixa</button><button id="enterCashBtn" class="primary" type="button" onclick="enterCurrentCash()" style="display:none">💵 Entrar no caixa</button><button id="editOpeningCashBtn" class="secondary" type="button" onclick="editOpeningCash()" style="display:none">✏️ Editar saldo inicial</button><button id="closeCashBtn" class="secondary" type="button" onclick="closeCash()" style="display:none">🔒 Fechar caixa</button></div></div>
 <div style="height:12px"></div>
 <div class="card"><form onsubmit="addCash(event)"><div class="row"><div class="field"><label>Tipo</label><select id="cashType"><option value="Entrada">Entrada</option><option value="Saída">Saída</option></select></div><div class="field"><label>Valor</label><input id="cashValue" type="number" min="0" step=".01" required></div></div><div class="field"><label>Descrição</label><input id="cashDescription" type="text" placeholder="Ex.: compra de ingredientes"></div><div class="actions"><button id="cashSubmitBtn" class="primary" type="submit">💰 Registrar movimento</button><button id="cancelCashEditBtn" class="secondary" type="button" onclick="cancelCashEdit()" style="display:none">Cancelar edição</button></div></form></div>
 <div style="height:12px"></div><div class="card"><h3 style="margin-bottom:8px">💚 Separar lucro</h3><p class="mini">Registre o valor do lucro que você retirou do caixa e deixou separado. Isso não é uma despesa da empresa.</p><form onsubmit="separateProfit(event)"><div class="row"><div class="field"><label>Valor do lucro</label><input id="profitValue" type="number" min="0" step=".01" required></div><div class="field"><label>Descrição</label><input id="profitDescription" type="text" placeholder="Ex.: Lucro separado do dia"></div></div><button class="primary" type="submit">💚 Separar lucro</button></form></div>
@@ -435,7 +435,7 @@ function save(){localStorage.setItem(KEY,JSON.stringify(data))}
 function realToday(){const d=new Date();const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),day=String(d.getDate()).padStart(2,"0");return `${y}-${m}-${day}`}
 function today(){return data?.settings?.businessDate||realToday()}
 function dateBR(d){return d?new Date(d+"T12:00:00").toLocaleDateString("pt-BR"):""}
-function showTab(id){if(id==="cash"){const od=getCashDay(today());cashViewDate=od?.opened?today():today();}document.querySelectorAll("main > section").forEach(s=>s.classList.remove("show"));const target=document.getElementById(id);if(target)target.classList.add("show");document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));const n=document.getElementById("n-"+id);if(n)n.classList.add("active");render();window.scrollTo({top:0,behavior:"smooth"})}
+function showTab(id){if(id==="cash"){cashViewDate=today();}document.querySelectorAll("main > section").forEach(s=>s.classList.remove("show"));const target=document.getElementById(id);if(target)target.classList.add("show");document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));const n=document.getElementById("n-"+id);if(n)n.classList.add("active");render();window.scrollTo({top:0,behavior:"smooth"})}
 function normalizeWhatsApp(phone){let d=String(phone||"").replace(/\D/g,"");if(d.startsWith("00"))d=d.slice(2);if(d.startsWith("55"))return d;if(d.length===10||d.length===11)return"55"+d;return""}
 function productById(id){return data.products.find(p=>p.id===id)}
 function activeProducts(){return data.products.filter(p=>p.active!==false)}
@@ -810,7 +810,12 @@ function monthKey(d){return String(d||"").slice(0,7)}
 function salesProfit(list){return list.reduce((a,s)=>a+Number(s.subtotal??s.total??0)-Number(s.costTotal||s.items?.reduce((z,i)=>z+i.cost*i.qty,0)||0),0)}
 function businessRevenue(list){return list.reduce((a,s)=>a+Number(s.total??s.subtotal??0),0)}
 function getCashDay(date=today()){return data.cashDays[date]||null}
-function cashDayTotals(date=today()){const day=getCashDay(date);const sid=day?.sessionId;const list=data.cash.filter(x=>x.date===date&&(!sid||x.cashSessionId===sid));return {in:list.filter(x=>x.type==="Entrada").reduce((a,x)=>a+Number(x.value||0),0),out:list.filter(x=>x.type==="Saída"&&x.kind!=="profit_expense"&&x.kind!=="profit_to_capital").reduce((a,x)=>a+Number(x.value||0),0)}}
+function cashEntriesForDay(date=today()){
+ const day=getCashDay(date); if(!day?.opened||!day.sessionId)return [];
+ const openedAt=String(day.openedAt||"");
+ return data.cash.filter(x=>x.date===date&&x.cashSessionId===day.sessionId&&(!openedAt || !x.createdAt || String(x.createdAt)>=openedAt));
+}
+function cashDayTotals(date=today()){const list=cashEntriesForDay(date);return {in:list.filter(x=>x.type==="Entrada").reduce((a,x)=>a+Number(x.value||0),0),out:list.filter(x=>x.type==="Saída"&&x.kind!=="profit_expense"&&x.kind!=="profit_to_capital").reduce((a,x)=>a+Number(x.value||0),0)}}
 function getPreviousClosedCashDay(date=today()){
  const keys=Object.keys(data.cashDays).filter(k=>k<date && data.cashDays[k]?.opened&&data.cashDays[k]?.closed).sort();
  if(!keys.length)return null;
@@ -830,6 +835,12 @@ function openCash(){
  save();render();alert(`Caixa aberto com ${brl(opening)}. 💜`);
 }
 
+function enterCurrentCash(){
+ const d=today(),day=getCashDay(d);
+ if(!day?.opened){alert("Não existe um caixa aberto hoje. Abra o caixa primeiro. 💜");return}
+ cashViewDate=d;
+ showTab("cash");
+}
 function editOpeningCash(){
  const d=today(),day=data.cashDays[d];
  if(!day||!day.opened){alert("Abra o caixa primeiro.");return}
@@ -875,7 +886,7 @@ function leaveHistoricalCash(){cashViewDate=null;render();}
 function currentDayCashAvailable(){
  const d=selectedCashDate(),day=getCashDay(d);
  if(!day?.opened)return 0;
- const daySession=day.sessionId;const list=data.cash.filter(x=>x.date===d&&(!daySession||x.cashSessionId===daySession));
+ const list=cashEntriesForDay(d);
  const cin=list.filter(x=>x.type==="Entrada").reduce((a,x)=>a+Number(x.value||0),0);
  const cout=list.filter(x=>x.type==="Saída" && x.kind!=="profit_withdrawal" && x.kind!=="profit_expense" && x.kind!=="profit_to_capital").reduce((a,x)=>a+Number(x.value||0),0);
  const sep=list.filter(x=>x.kind==="profit_withdrawal").reduce((a,x)=>a+Number(x.value||0),0);
@@ -1037,17 +1048,17 @@ if(editableCashHistory) editableCashHistory.innerHTML=cashDaysHTML || '<div clas
   productionList.innerHTML=(productionHTML||"")+((productionHTML&&withdrawalHTML)?'<div style="height:8px"></div>':"")+withdrawalHTML||`<div class="empty">Nenhuma movimentação de estoque registrada.</div>`;
  const cashDate=selectedCashDate(),cashDay=getCashDay(cashDate),cashTotals=cashDayTotals(cashDate);
  const cin=cashTotals.in;
- const regularOut=data.cash.filter(x=>x.date===cashDate&&x.type==="Saída"&&x.kind!=="profit_withdrawal"&&x.kind!=="profit_expense"&&x.kind!=="profit_to_capital").reduce((a,x)=>a+Number(x.value||0),0);
- const profitSeparatedToday=data.cash.filter(x=>x.date===cashDate&&x.kind==="profit_withdrawal").reduce((a,x)=>a+Number(x.value||0),0);
- const profitSpentToday=data.cash.filter(x=>x.date===cashDate&&x.kind==="profit_expense").reduce((a,x)=>a+Number(x.value||0),0);
+ const regularOut=cashEntriesForDay(cashDate).filter(x=>x.type==="Saída"&&x.kind!=="profit_withdrawal"&&x.kind!=="profit_expense"&&x.kind!=="profit_to_capital").reduce((a,x)=>a+Number(x.value||0),0);
+ const profitSeparatedToday=cashEntriesForDay(cashDate).filter(x=>x.kind==="profit_withdrawal").reduce((a,x)=>a+Number(x.value||0),0);
+ const profitSpentToday=cashEntriesForDay(cashDate).filter(x=>x.kind==="profit_expense").reduce((a,x)=>a+Number(x.value||0),0);
  cashIn.textContent=brl(cin);cashOut.textContent=brl(regularOut);const cps=document.getElementById("cashProfitSeparatedToday");if(cps)cps.textContent=brl(profitSeparatedToday);const pav=document.getElementById("profitAvailable");if(pav)pav.textContent=brl(calculateProfitAvailable());cashBalance.textContent=brl(currentDayCashAvailable());
  const wcBalance=workingCapital(),wcGoalCash=Number(data.settings.workingCapitalGoal)||0,wcGap=Math.max(0,wcGoalCash-wcBalance);
  const cwc=document.getElementById("cashWorkingCapital"),cwg=document.getElementById("cashWorkingCapitalGoal"),cgap=document.getElementById("cashWorkingCapitalGap");
  if(cwc)cwc.textContent=brl(wcBalance);if(cwg)cwg.textContent=brl(wcGoalCash);if(cgap)cgap.textContent=brl(wcGap);
 
  if(cashDay?.opened){cashDayStatus.textContent=cashDay.closed?"Caixa fechado":"Caixa aberto";cashDayIcon.textContent=cashDay.closed?"🔒":"🔓";if(cashDay.closed){cashDayInfo.textContent=`Abertura: ${brl(cashDay.opening)}${cashDay.openingFromPrevious?" • veio do fechamento anterior":""} • Esperado: ${brl(cashDay.expected)} • Contado: ${brl(cashDay.counted)} • Diferença: ${brl(cashDay.difference)}`;}else{cashDayInfo.textContent=`Abertura: ${brl(cashDay.opening)} • Movimentos: +${brl(cashTotals.in)} / -${brl(cashTotals.out)}`;}}else{cashDayStatus.textContent="Caixa fechado";cashDayIcon.textContent="🔒";cashDayInfo.textContent="Abra o caixa para registrar o saldo inicial.";}
- openCashBtn.style.display=cashDay?.opened?"none":"block";editOpeningCashBtn.style.display=cashDay?.opened?"block":"none";closeCashBtn.style.display=cashDay?.opened&&!cashDay.closed?"block":"none";
- const cashDisplayList=(cashDay?.opened&&cashDay.sessionId)?data.cash.filter(x=>x.date===cashDate&&x.cashSessionId===cashDay.sessionId):data.cash.slice(); cashList.innerHTML=cashDisplayList.slice().reverse().slice(0,80).map(x=>{const isProfit=x.kind==="profit_withdrawal",isProfitExpense=x.kind==="profit_expense",isProfitToCapital=x.kind==="profit_to_capital",isCapitalDeposit=x.kind==="working_capital_deposit";const special=isProfit||isProfitExpense||isProfitToCapital||isCapitalDeposit;const canEdit=x.kind!=="sale"&&!special;const label=isProfit?"Lucro separado":isProfitExpense?"Saída do lucro":isProfitToCapital?"Lucro → Capital de giro":isCapitalDeposit?"Reposição do capital":x.type;const badgeClass=(isProfit||isProfitExpense||isProfitToCapital)?"purple":x.type==="Entrada"?"green":"red";return `<div class="item"><div><strong>${esc(x.description||"Movimentação")}</strong><small>${dateBR(x.date)} • ${label}</small></div><div style="text-align:right"><span class="badge ${badgeClass}">${isProfit?"💚 ":isProfitExpense?"💳 ":isProfitToCapital?"🏦 ":isCapitalDeposit?"🏦 ":""}${x.type==="Entrada"?"+":"-"} ${brl(x.value)}</span><div class="actions" style="margin-top:6px;justify-content:flex-end">${canEdit?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editCash(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteCash(${x.id})">🗑️ Apagar</button>`:x.kind==="sale"?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="showTab('sell')">✏️ Editar venda</button>`:""}</div></div></div>`}).join("")||`<div class="empty">Nenhuma movimentação registrada.</div>`;
+ openCashBtn.style.display=cashDay?.opened?"none":"block";const enterCashBtn=document.getElementById("enterCashBtn");if(enterCashBtn)enterCashBtn.style.display=cashDay?.opened&&!cashDay.closed?"block":"none";editOpeningCashBtn.style.display=cashDay?.opened?"block":"none";closeCashBtn.style.display=cashDay?.opened&&!cashDay.closed?"block":"none";
+ const cashDisplayList=cashEntriesForDay(cashDate); cashList.innerHTML=cashDisplayList.slice().reverse().slice(0,80).map(x=>{const isProfit=x.kind==="profit_withdrawal",isProfitExpense=x.kind==="profit_expense",isProfitToCapital=x.kind==="profit_to_capital",isCapitalDeposit=x.kind==="working_capital_deposit";const special=isProfit||isProfitExpense||isProfitToCapital||isCapitalDeposit;const canEdit=x.kind!=="sale"&&!special;const label=isProfit?"Lucro separado":isProfitExpense?"Saída do lucro":isProfitToCapital?"Lucro → Capital de giro":isCapitalDeposit?"Reposição do capital":x.type;const badgeClass=(isProfit||isProfitExpense||isProfitToCapital)?"purple":x.type==="Entrada"?"green":"red";return `<div class="item"><div><strong>${esc(x.description||"Movimentação")}</strong><small>${dateBR(x.date)} • ${label}</small></div><div style="text-align:right"><span class="badge ${badgeClass}">${isProfit?"💚 ":isProfitExpense?"💳 ":isProfitToCapital?"🏦 ":isCapitalDeposit?"🏦 ":""}${x.type==="Entrada"?"+":"-"} ${brl(x.value)}</span><div class="actions" style="margin-top:6px;justify-content:flex-end">${canEdit?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editCash(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteCash(${x.id})">🗑️ Apagar</button>`:x.kind==="sale"?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="showTab('sell')">✏️ Editar venda</button>`:""}</div></div></div>`}).join("")||`<div class="empty">Nenhuma movimentação registrada.</div>`;
  const wch=document.getElementById("workingCapitalHistory");
  if(wch){const hist=(data.workingCapitalMovements||[]).slice().reverse().slice(0,30);wch.innerHTML=hist.length?hist.map(x=>`<div class="item"><div><strong>${x.kind==="withdraw"?"🏦 Uso do capital":"➕ Reposição do capital"}</strong><small>${dateBR(x.date)}${x.description?" • "+esc(x.description):""}</small></div><span class="badge ${x.kind==="withdraw"?"red":"green"}">${x.kind==="withdraw"?"-":"+"} ${brl(x.value)}</span></div>`).join(""):"<div class='empty'>Nenhum movimento do capital de giro ainda.</div>"}
 
