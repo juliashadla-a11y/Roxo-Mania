@@ -437,46 +437,27 @@ function realToday(){const d=new Date();const y=d.getFullYear(),m=String(d.getMo
 function today(){return data?.settings?.businessDate||realToday()}
 function dateBR(d){return d?new Date(d+"T12:00:00").toLocaleDateString("pt-BR"):""}
 function openCashScreen(date=null){
-  try{
-    const openDays=Object.entries(data.cashDays||{}).filter(([d,day])=>day?.opened&&!day?.closed).sort(([a],[b])=>b.localeCompare(a));
-    const requested=date && data.cashDays?.[date]?.opened ? date : null;
-    const todayDay=data.cashDays?.[today()];
-    const active=requested || (todayDay?.opened&&!todayDay?.closed ? today() : (openDays[0]?.[0]||today()));
-    cashViewDate=active;
-    document.querySelectorAll('main > section').forEach(s=>s.classList.remove('show'));
-    const target=document.getElementById('cash');
-    if(!target) return;
-    target.classList.add('show');
-    document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
-    const n=document.getElementById('n-cash'); if(n)n.classList.add('active');
-    render();
-    window.scrollTo(0,0);
-  }catch(e){
-    console.error('Erro ao abrir o caixa:',e);
-    const target=document.getElementById('cash');
-    if(target){document.querySelectorAll('main > section').forEach(s=>s.classList.remove('show'));target.classList.add('show');}
-    const n=document.getElementById('n-cash'); if(n){document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));n.classList.add('active');}
-  }
+  const requested=date&&data.cashDays?.[date]?.opened?date:null;
+  cashViewDate=requested||getActiveCashDate();
+  document.querySelectorAll('main > section').forEach(sec=>sec.classList.remove('show'));
+  const target=document.getElementById('cash');
+  if(target)target.classList.add('show');
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  const n=document.getElementById('n-cash');if(n)n.classList.add('active');
+  try{render();}catch(e){console.error('Falha no render geral ao abrir caixa',e);}finally{renderCashPanel();}
+  window.scrollTo({top:0,behavior:'smooth'});
 }
+
 function showTab(id){
-  if(id==="cash"){
-    const todayCash=data.cashDays?.[today()];
-    if(todayCash?.opened && !todayCash?.closed){
-      cashViewDate=today();
-    }else if(!cashViewDate || !data.cashDays?.[cashViewDate]?.opened){
-      const openDays=Object.entries(data.cashDays||{}).filter(([d,day])=>day?.opened&&!day?.closed).sort(([a],[b])=>b.localeCompare(a));
-      cashViewDate=openDays.length?openDays[0][0]:today();
-    }
-  }
-  document.querySelectorAll("main > section").forEach(s=>s.classList.remove("show"));
-  const target=document.getElementById(id);
-  if(target)target.classList.add("show");
-  document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));
-  const n=document.getElementById("n-"+id);
-  if(n)n.classList.add("active");
-  render();
-  window.scrollTo({top:0,behavior:"smooth"});
+  if(id==='cash')cashViewDate=getActiveCashDate();
+  document.querySelectorAll('main > section').forEach(sec=>sec.classList.remove('show'));
+  const target=document.getElementById(id);if(target)target.classList.add('show');
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  const n=document.getElementById('n-'+id);if(n)n.classList.add('active');
+  try{render();}catch(e){console.error('Falha no render ao abrir aba '+id,e);}finally{if(id==='cash')renderCashPanel();}
+  window.scrollTo({top:0,behavior:'smooth'});
 }
+
 function normalizeWhatsApp(phone){let d=String(phone||"").replace(/\D/g,"");if(d.startsWith("00"))d=d.slice(2);if(d.startsWith("55"))return d;if(d.length===10||d.length===11)return"55"+d;return""}
 function productById(id){return data.products.find(p=>p.id===id)}
 function activeProducts(){return data.products.filter(p=>p.active!==false)}
@@ -922,7 +903,14 @@ function closeCash(){
 }
 
 
-function selectedCashDate(){return cashViewDate && data.cashDays?.[cashViewDate]?.opened ? cashViewDate : today();}
+function getActiveCashDate(){
+  const entries=Object.entries(data.cashDays||{}).filter(([d,day])=>day?.opened&&!day?.closed).sort(([a],[b])=>b.localeCompare(a));
+  const td=today();
+  if(data.cashDays?.[td]?.opened&&!data.cashDays[td]?.closed)return td;
+  if(cashViewDate && data.cashDays?.[cashViewDate]?.opened&&!data.cashDays[cashViewDate]?.closed)return cashViewDate;
+  return entries.length?entries[0][0]:td;
+}
+function selectedCashDate(){return getActiveCashDate();}
 function enterHistoricalCash(date){
   if(!data.cashDays[date]){alert("Esse caixa não está registrado.");return}
   openCashScreen(date);
@@ -1098,6 +1086,31 @@ function renderMonthlyHistory(){
 function selectReportMonth(m){const el=document.getElementById("reportMonth");if(el){el.value=m;render();showTab("reports")}}
 function renderReportMonthOptions(){const el=document.getElementById("reportMonth");if(!el)return;const current=el.value||today().slice(0,7);el.innerHTML=reportMonths().map(m=>`<option value="${m}">${esc(monthLabel(m))}</option>`).join("")+`<option value="all">Todo o período</option>`;el.value=reportMonths().includes(current)?current:today().slice(0,7)}
 
+function renderCashPanel(){
+  try{
+    const date=getActiveCashDate(),day=data.cashDays?.[date]||null;
+    const totals=cashDayTotals(date);
+    const entries=cashEntriesForDay(date);
+    const cin=entries.filter(x=>x.type==='Entrada').reduce((a,x)=>a+Number(x.value||0),0);
+    const regularOut=entries.filter(x=>x.type==='Saída'&&x.kind!=='profit_withdrawal'&&x.kind!=='profit_expense'&&x.kind!=='profit_to_capital').reduce((a,x)=>a+Number(x.value||0),0);
+    const separated=entries.filter(x=>x.kind==='profit_withdrawal').reduce((a,x)=>a+Number(x.value||0),0);
+    const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val};
+    set('cashIn',brl(cin));set('cashOut',brl(regularOut));set('cashProfitSeparatedToday',brl(separated));set('profitAvailable',brl(calculateProfitAvailable()));set('cashBalance',brl(currentDayCashAvailable()));
+    const status=document.getElementById('cashDayStatus'),icon=document.getElementById('cashDayIcon'),info=document.getElementById('cashDayInfo');
+    if(status)status.textContent=day?.opened?(day.closed?'Caixa fechado':'Caixa aberto'):'Caixa fechado';
+    if(icon)icon.textContent=day?.opened&&!day.closed?'🔓':'🔒';
+    if(info){
+      if(day?.opened&&!day.closed)info.textContent=`Abertura: ${brl(day.opening||0)} • Movimentos: +${brl(totals.in)} / -${brl(totals.out)}`;
+      else if(day?.opened)info.textContent=`Abertura: ${brl(day.opening||0)} • Esperado: ${brl(day.expected||0)} • Contado: ${brl(day.counted||0)} • Diferença: ${brl(day.difference||0)}`;
+      else info.textContent='Abra o caixa para registrar o saldo inicial.';
+    }
+    const openBtn=document.getElementById('openCashBtn'),editBtn=document.getElementById('editOpeningCashBtn'),closeBtn=document.getElementById('closeCashBtn');
+    if(openBtn)openBtn.style.display=day?.opened?'none':'block';
+    if(editBtn)editBtn.style.display=day?.opened?'block':'none';
+    if(closeBtn)closeBtn.style.display=day?.opened&&!day.closed?'block':'none';
+  }catch(e){console.error('Falha isolada no painel do caixa',e);}
+}
+
 function render(){
 
 const cashDaysHTML=Object.entries(data.cashDays||{}).sort(([a],[b])=>b.localeCompare(a)).map(([date,day])=>`<div class="item"><div><strong>💰 Caixa — ${dateBR(date)}</strong><small>Abertura: ${brl(day.opening||0)} • ${day.closed?`Fechamento: ${brl(day.counted||0)} • Esperado: ${brl(day.expected||0)} • Diferença: ${brl(day.difference||0)}`:"Ainda aberto"}</small></div><div class="actions"><span class="badge purple">${day.closed?"Fechado":"Aberto"}</span>${day.closed?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="reopenCashDay('${date}')">🔓 Reabrir</button>`:`<button class="primary" style="padding:6px 8px;font-size:11px" onclick="closeHistoricalCash('${date}')">🔒 Fechar agora</button>`}<button type="button" class="primary enter-cash-btn" data-enter-cash="${date}" onclick="openCashScreen('${date}');return false;" style="padding:6px 8px;font-size:11px;position:relative;z-index:9999;pointer-events:auto;cursor:pointer;touch-action:manipulation">👁️ Entrar</button><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editCashDay('${date}')">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteCashDay('${date}')">🗑️ Apagar</button></div></div>`).join("");
@@ -1160,7 +1173,7 @@ if(editableCashHistory) editableCashHistory.innerHTML=cashDaysHTML || '<div clas
 saleDate.value=today();
 const customerNameInput=customerNameEl();
 if(customerNameInput){customerNameInput.addEventListener("input",fillCustomerFromName);customerNameInput.addEventListener("change",fillCustomerFromName);customerNameInput.addEventListener("blur",fillCustomerFromName);}
-try{render()}catch(e){console.error("Falha no render principal",e)}
+try{render()}catch(e){console.error("Falha no render principal",e)}finally{renderCashPanel()}
 function renderClientsOnly(){
   const cl=document.getElementById("clientsList"); if(!cl)return;
   const clients=Array.isArray(data.clients)?data.clients:[];
@@ -1168,6 +1181,7 @@ function renderClientsOnly(){
 }
 renderClientsOnly();
 renderProductCatalogOnly();
+renderCashPanel();
 
 // Histórico de produção isolado: renderiza mesmo se outra parte do painel falhar.
 function renderProductionHistoryOnly(){
@@ -1208,19 +1222,5 @@ renderProductionHistoryOnly();
 })();
 </script>
 
-<script>
-(function(){
- document.addEventListener('click',function(e){
-  const b=e.target.closest && e.target.closest('[data-enter-cash], .enter-cash, button[title*="Entrar"], button[aria-label*="Entrar"]');
-  if(!b) return;
-  e.preventDefault(); e.stopImmediatePropagation();
-  const d=b.getAttribute('data-date')||b.dataset.date||b.getAttribute('data-enter-cash');
-  try {
-   if(typeof window.enterHistoricalCash==='function'){ window.enterHistoricalCash(d); return; }
-   if(typeof window.showTab==='function'){ if(typeof window.cashViewDate!=='undefined') window.cashViewDate=d; window.showTab('cash'); }
-  } catch(err) { console.error(err); }
- }, true);
-})();
-</script>
 </body>
 </html>
