@@ -407,7 +407,7 @@ let data=loadData();ensureProductCatalog();lockSeptemberInventoryOnce();data.set
   data.settings.v32SeptemberStarted=true;
 })();
 save();
-
+repairSaleCashEntries();
 let editingSaleId=null;
 let editingProductId=null;
 let editingCashId=null;
@@ -532,9 +532,12 @@ function addSale(e){
  if(existingClient){existingClient.name=customerName;existingClient.phone=customerPhone;existingClient.address=address||existingClient.address||"";if(note)existingClient.note=note;}
  else data.clients.push({id:"c"+Date.now(),name:customerName,phone:customerPhone,address,note});
  const saleDescription=`Venda • ${customerName} • ${items.map(i=>i.name).join(", ")} • ${payment}`;
- const cashEntry=data.cash.find(x=>x.saleId===sale.id&&x.kind!=="delivery");
- if(cashEntry){cashEntry.date=date;cashEntry.value=total;cashEntry.description=saleDescription;cashEntry.kind="sale";}
- else data.cash.push({id:Date.now()+1,date,type:"Entrada",value:total,description:saleDescription,saleId:sale.id,kind:"sale",createdAt:new Date().toISOString()});
+ const openDay=getCashDay(date);
+ if(openDay?.opened && !openDay.closed){
+   const cashEntry=data.cash.find(x=>x.saleId===sale.id&&x.kind!=="delivery");
+   if(cashEntry){cashEntry.date=date;cashEntry.value=total;cashEntry.description=saleDescription;cashEntry.kind="sale";cashEntry.createdAt=cashEntry.createdAt||Date.now();}
+   else data.cash.push({id:Date.now()+1,date,type:"Entrada",value:total,description:saleDescription,saleId:sale.id,kind:"sale",createdAt:Date.now()});
+ }
  // A taxa de entrega faz parte do faturamento e do caixa.
  // Como o entregador é da família, não lançamos uma saída automática para a entrega.
  data.cash=data.cash.filter(x=>!(x.saleId===sale.id&&x.kind==="delivery"));
@@ -619,7 +622,7 @@ function addCash(e){
    const cancel=document.getElementById("cancelCashEditBtn");if(cancel)cancel.style.display="none";
    save();e.target.reset();render();alert("Movimentação atualizada! 💜");return;
  }
- data.cash.push({id:Date.now(),date:today(),type,value,description:description||"Movimentação",createdAt:new Date().toISOString()});
+ data.cash.push({id:Date.now(),date:today(),type,value,description:description||"Movimentação"});
  save();e.target.reset();render();alert("Movimentação registrada! 💰");
 }
 function editCash(id){
@@ -653,7 +656,7 @@ function separateProfit(e){
  if(!day?.opened||day.closed){alert(`Abra o caixa de ${dateBR(d)} antes de separar o lucro. 💚`);return}
  const available=currentDayCashAvailable();
  if(value>available){alert(`O valor informado (${brl(value)}) é maior que o saldo disponível para separar (${brl(available)}).`);return}
- data.cash.push({id:Date.now(),date:d,type:"Saída",value,description,kind:"profit_withdrawal",createdAt:new Date().toISOString()});
+ data.cash.push({id:Date.now(),date:d,type:"Saída",value,description,kind:"profit_withdrawal",createdAt:Date.now()});
  save();e.target.reset();render();alert(`Lucro de ${brl(value)} separado do caixa de ${dateBR(d)}. 💚`);
 }
 function addProfitExpense(e){
@@ -662,7 +665,7 @@ function addProfitExpense(e){
  if(!value||value<0){alert("Informe um valor válido.");return}
  const available=calculateProfitAvailable();
  if(value>available){alert(`O valor informado (${brl(value)}) é maior que o lucro disponível (${brl(available)}).`);return}
- data.cash.push({id:Date.now(),date:today(),type:"Saída",value,description,kind:"profit_expense",createdAt:new Date().toISOString()});
+ data.cash.push({id:Date.now(),date:today(),type:"Saída",value,description,kind:"profit_expense"});
  save();e.target.reset();render();alert(`Saída de ${brl(value)} registrada no lucro. 💳`);
 }
 function calculateProfitAvailable(){
@@ -797,7 +800,7 @@ function startNewMonth(){
   (data.workingCapitalMovements||[]).forEach(x=>{if(x.date===from)x.date=target;});
   if(data.cashDays?.[from]){data.cashDays[target]=data.cashDays[from];delete data.cashDays[from];}
   data.settings.businessDate=target;data.settings.v32SeptemberStarted=true;
-  save();render();
+  repairSaleCashEntries();save();render();
   alert("Controle de setembro iniciado! 💜\n\nA partir de agora, os novos registros serão lançados em setembro.");
 }
 function productionMonths(){const set=new Set([today().slice(0,7)]);(data.production||[]).forEach(x=>{const m=monthKey(x.date);if(/^\d{4}-\d{2}$/.test(m))set.add(m)});(data.stockWithdrawals||[]).forEach(x=>{const m=monthKey(x.date);if(/^\d{4}-\d{2}$/.test(m))set.add(m)});return [...set].sort().reverse()}
@@ -823,19 +826,17 @@ function importBackup(e){const f=e.target.files?.[0];if(!f)return;const r=new Fi
 function monthKey(d){return String(d||"").slice(0,7)}
 function salesProfit(list){return list.reduce((a,s)=>a+Number(s.subtotal??s.total??0)-Number(s.costTotal||s.items?.reduce((z,i)=>z+i.cost*i.qty,0)||0),0)}
 function businessRevenue(list){return list.reduce((a,s)=>a+Number(s.total??s.subtotal??0),0)}
-function cashEntriesForDay(date=today()){
- const day=data.cashDays?.[date];
- const openedAt=day?.openedAt?new Date(day.openedAt).getTime():null;
- return (data.cash||[]).filter(x=>x.date===date && (!openedAt || (x.createdAt && new Date(x.createdAt).getTime()>=openedAt)));
-}
+function repairSaleCashEntries(){ /* desativado: vendas antigas nunca são recriadas no caixa */ }
 function getCashDay(date=today()){return data.cashDays[date]||null}
-function cashDayTotals(date=today()){const list=cashEntriesForDay(date);return {in:list.filter(x=>x.type==="Entrada").reduce((a,x)=>a+Number(x.value||0),0),out:list.filter(x=>x.type==="Saída"&&x.kind!=="profit_expense"&&x.kind!=="profit_to_capital").reduce((a,x)=>a+Number(x.value||0),0)}}
-function getPreviousClosedCashDay(date=today()){
- const keys=Object.keys(data.cashDays).filter(k=>k<date && data.cashDays[k]?.opened&&data.cashDays[k]?.closed).sort();
- if(!keys.length)return null;
- return data.cashDays[keys[keys.length-1]];
+function cashDayTotals(date=today()){
+ const day=getCashDay(date);
+ const openedAt=Number(day?.openedAtMs||0);
+ const list=data.cash.filter(x=>x.date===date && (!openedAt || Number(x.createdAt||0)>=openedAt));
+ return {in:list.filter(x=>x.type==="Entrada").reduce((a,x)=>a+Number(x.value||0),0),out:list.filter(x=>x.type==="Saída"&&x.kind!=="profit_expense"&&x.kind!=="profit_to_capital").reduce((a,x)=>a+Number(x.value||0),0)};
 }
 function openCash(){
+ const activeOpen=Object.keys(data.cashDays||{}).find(d=>data.cashDays[d]?.opened && !data.cashDays[d]?.closed);
+ if(activeOpen){alert(`Já existe um caixa aberto em ${dateBR(activeOpen)}. 💜`); cashViewDate=activeOpen; render(); return}
  const d=today(),existing=getCashDay(d);
  if(existing?.opened){alert("O caixa de hoje já está aberto. 💜");return}
  const previous=getPreviousClosedCashDay(d);
@@ -845,13 +846,12 @@ function openCash(){
  if(raw===null)return;
  const opening=moneyInput(raw);
  if(!Number.isFinite(opening)||opening<0){alert("Informe um valor válido. Digite apenas o número, por exemplo: 50 ou 50,00.");return}
- data.cashDays[d]={opened:true,opening,openedAt:new Date().toISOString(),closed:false,openingFromPrevious:!!previous};
- cashViewDate=d;
+ data.cashDays[d]={opened:true,opening,openedAt:new Date().toISOString(),openedAtMs:Date.now(),closed:false,openingFromPrevious:!!previous};
  save();render();alert(`Caixa aberto com ${brl(opening)}. 💜`);
 }
 
 function editOpeningCash(){
- const d=today(),day=data.cashDays[d];
+ const d=getActiveCashDate(),day=data.cashDays[d];
  if(!day||!day.opened){alert("Abra o caixa primeiro.");return}
  const raw=prompt("Informe o novo saldo inicial do caixa:",Number(day.opening||0).toFixed(2));
  if(raw===null)return;
@@ -859,7 +859,7 @@ function editOpeningCash(){
  if(!Number.isFinite(opening)||opening<0){alert("Informe um valor válido. Digite apenas o número, por exemplo: 50 ou 50,00.");return}
  day.opening=opening;
  if(day.closed){
-   const totals=cashDayTotals(d),daySales=data.sales.filter(x=>x.date===d),profitToSeparate=cashEntriesForDay(d).filter(x=>x.kind==="profit_withdrawal").reduce((a,x)=>a+x.value,0);
+   const totals=cashDayTotals(d),daySales=data.sales.filter(x=>x.date===d),profitToSeparate=data.cash.filter(x=>x.date===d&&x.kind==="profit_withdrawal").reduce((a,x)=>a+x.value,0);
    day.expected=opening+totals.in-totals.out;
    day.expected=Math.max(0,day.expected);
    day.difference=Number(day.counted||0)-day.expected;
@@ -868,7 +868,7 @@ function editOpeningCash(){
 }
 
 function closeCash(){
-  const d=today(),day=getCashDay(d);
+  const d=getActiveCashDate(),day=getCashDay(d);
   if(!day?.opened){alert("Abra o caixa antes de fechá-lo. 💜");return}
   if(day.closed){alert("O caixa de hoje já está fechado.");return}
   const totals=cashDayTotals(d),expected=Number(day.opening||0)+totals.in-totals.out;
@@ -882,7 +882,12 @@ function closeCash(){
 }
 
 
-function selectedCashDate(){return cashViewDate && data.cashDays?.[cashViewDate]?.opened ? cashViewDate : today();}
+function getActiveCashDate(){
+ const dates=Object.keys(data.cashDays||{}).sort().reverse();
+ const openDate=dates.find(d=>data.cashDays[d]?.opened && !data.cashDays[d]?.closed);
+ return cashViewDate||openDate||today();
+}
+function selectedCashDate(){return getActiveCashDate();}
 function enterHistoricalCash(date){
   if(!data.cashDays[date]){alert("Esse caixa não está registrado.");return}
   cashViewDate=date;
@@ -895,7 +900,7 @@ function leaveHistoricalCash(){cashViewDate=null;render();}
 function currentDayCashAvailable(){
  const d=selectedCashDate(),day=getCashDay(d);
  if(!day?.opened)return 0;
- const list=cashEntriesForDay(d);
+ const list=data.cash.filter(x=>x.date===d);
  const cin=list.filter(x=>x.type==="Entrada").reduce((a,x)=>a+Number(x.value||0),0);
  const cout=list.filter(x=>x.type==="Saída" && x.kind!=="profit_withdrawal" && x.kind!=="profit_expense" && x.kind!=="profit_to_capital").reduce((a,x)=>a+Number(x.value||0),0);
  const sep=list.filter(x=>x.kind==="profit_withdrawal").reduce((a,x)=>a+Number(x.value||0),0);
@@ -1059,9 +1064,9 @@ if(editableCashHistory) editableCashHistory.innerHTML=cashDaysHTML || '<div clas
   renderProductionHistory();
  const cashDate=selectedCashDate(),cashDay=getCashDay(cashDate),cashTotals=cashDayTotals(cashDate);
  const cin=cashTotals.in;
- const regularOut=cashEntriesForDay(cashDate).filter(x=>x.type==="Saída"&&x.kind!=="profit_withdrawal"&&x.kind!=="profit_expense"&&x.kind!=="profit_to_capital").reduce((a,x)=>a+Number(x.value||0),0);
- const profitSeparatedToday=cashEntriesForDay(cashDate).filter(x=>x.kind==="profit_withdrawal").reduce((a,x)=>a+Number(x.value||0),0);
- const profitSpentToday=cashEntriesForDay(cashDate).filter(x=>x.kind==="profit_expense").reduce((a,x)=>a+Number(x.value||0),0);
+ const regularOut=data.cash.filter(x=>x.date===cashDate&&x.type==="Saída"&&x.kind!=="profit_withdrawal"&&x.kind!=="profit_expense"&&x.kind!=="profit_to_capital").reduce((a,x)=>a+Number(x.value||0),0);
+ const profitSeparatedToday=data.cash.filter(x=>x.date===cashDate&&x.kind==="profit_withdrawal").reduce((a,x)=>a+Number(x.value||0),0);
+ const profitSpentToday=data.cash.filter(x=>x.date===cashDate&&x.kind==="profit_expense").reduce((a,x)=>a+Number(x.value||0),0);
  cashIn.textContent=brl(cin);cashOut.textContent=brl(regularOut);const cps=document.getElementById("cashProfitSeparatedToday");if(cps)cps.textContent=brl(profitSeparatedToday);const pav=document.getElementById("profitAvailable");if(pav)pav.textContent=brl(calculateProfitAvailable());cashBalance.textContent=brl(currentDayCashAvailable());
  const wcBalance=workingCapital(),wcGoalCash=Number(data.settings.workingCapitalGoal)||0,wcGap=Math.max(0,wcGoalCash-wcBalance);
  const cwc=document.getElementById("cashWorkingCapital"),cwg=document.getElementById("cashWorkingCapitalGoal"),cgap=document.getElementById("cashWorkingCapitalGap");
