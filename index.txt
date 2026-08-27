@@ -1,0 +1,1095 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#6A1B9A">
+<title>Roxo Mania — Organização Final</title>
+<style>
+:root{--roxo:#6A1B9A;--roxo2:#45206B;--roxo3:#8E44AD;--lilas:#F3E8FF;--bg:#F8F7FB;--card:#fff;--texto:#27232D;--muted:#77717F;--verde:#22A06B;--vermelho:#D64545;--borda:#E8E2EE;--amarelo:#B7791F;--sombra:0 8px 25px rgba(69,32,107,.08)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--texto);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+header{background:linear-gradient(135deg,#6A1B9A,#45206B);color:#fff;padding:24px 18px 30px;border-radius:0 0 28px 28px;box-shadow:0 8px 25px rgba(69,32,107,.2)}
+.brand{font-size:25px;font-weight:800;letter-spacing:-.5px}.subtitle{margin-top:6px;opacity:.88;font-size:14px}
+main{max-width:760px;margin:auto;padding:18px 16px 115px}section{display:none}section.show{display:block;animation:entrada .25s ease}@keyframes entrada{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+h1{font-size:25px;margin:4px 0 5px}h2{font-size:20px;margin:4px 0 14px}h3{margin:0}.hello{margin-bottom:18px}.hello small{color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.card{background:var(--card);border:1px solid var(--borda);border-radius:18px;padding:16px;box-shadow:var(--sombra)}.card.full{grid-column:1/-1}
+.label{color:var(--muted);font-size:13px;margin-bottom:7px}.value{font-size:23px;font-weight:800}.green{color:var(--verde)}.purple{color:var(--roxo)}.red{color:var(--vermelho)}.warning{color:var(--amarelo)}
+.progress{height:10px;background:#eee8f3;border-radius:20px;overflow:hidden;margin-top:12px}.progress div{height:100%;width:0;background:linear-gradient(90deg,#6A1B9A,#A855D9);border-radius:20px}
+.notice{background:var(--lilas);border:1px solid #E6D1FA;color:var(--roxo2);padding:13px;border-radius:15px;font-size:13px;margin-top:14px}
+form{display:flex;flex-direction:column;gap:12px}.field{display:flex;flex-direction:column;gap:6px}.field label{font-size:13px;font-weight:700}
+input,select{width:100%;border:1px solid var(--borda);border-radius:13px;padding:13px;background:#fff;color:var(--texto);font-size:16px;outline:none}input:focus,select:focus{border-color:var(--roxo);box-shadow:0 0 0 3px rgba(106,27,154,.08)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}button{border:0;border-radius:14px;padding:13px 16px;font-size:15px;font-weight:750;cursor:pointer}.primary{background:var(--roxo);color:#fff;box-shadow:0 6px 15px rgba(106,27,154,.2)}.secondary{background:var(--lilas);color:var(--roxo2)}.danger{background:#FDECEC;color:var(--vermelho)}.ghost{background:#fff;color:var(--roxo);border:1px solid var(--borda)}
+.list{display:flex;flex-direction:column;gap:10px}.item{background:#fff;border:1px solid var(--borda);border-radius:15px;padding:13px;display:flex;justify-content:space-between;align-items:center;gap:10px}.item strong{display:block}.item small{color:var(--muted)}
+.badge{padding:6px 9px;border-radius:10px;font-size:12px;font-weight:700;white-space:nowrap}.badge.green{background:#E9F8F1}.badge.red{background:#FDECEC}.badge.purple{background:var(--lilas)}.empty{text-align:center;color:var(--muted);padding:25px 10px}
+nav{position:fixed;z-index:20;bottom:0;left:0;right:0;background:rgba(255,255,255,.96);backdrop-filter:blur(15px);border-top:1px solid var(--borda);padding:5px 3px calc(5px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:2px;overflow:hidden}nav button{background:transparent;color:#817986;padding:6px 1px;font-size:10px;line-height:1.1;border-radius:10px;min-width:0;white-space:nowrap}nav button.active{background:var(--lilas);color:var(--roxo)}.nav-icon{display:block;font-size:16px;line-height:1;margin-bottom:2px}
+.total{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.total strong{color:var(--roxo);font-size:21px}.top-actions{display:flex;gap:8px;margin-top:14px}.top-actions button{flex:1}.actions{display:flex;gap:8px;flex-wrap:wrap}.actions button{flex:1;min-width:130px}
+.mini{font-size:12px;color:var(--muted)}.stock-ok{background:#E9F8F1;color:#18794E}.stock-low{background:#FFF4D6;color:#8A5A00}.stock-out{background:#FDECEC;color:#A62E2E}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:9px 6px;border-bottom:1px solid var(--borda)}th{color:var(--muted);font-weight:700}
+@media(max-width:420px){.grid{grid-template-columns:1fr 1fr}.row{grid-template-columns:1fr}.value{font-size:20px}}
+.order-items{display:flex;flex-direction:column;gap:8px}.order-row{display:grid;grid-template-columns:1fr 70px 90px 34px;gap:7px;align-items:center;background:#faf8fc;padding:8px;border-radius:12px}.order-row select,.order-row input{padding:10px;font-size:14px}.order-row .remove{padding:9px;background:#FDECEC;color:var(--vermelho);min-width:34px}.metric-wide{grid-column:1/-1}.product-card{display:flex;justify-content:space-between;align-items:center;gap:10px}.product-meta{font-size:12px;color:var(--muted);margin-top:4px}.kpi-note{font-size:12px;color:var(--muted);margin-top:6px}.capital{background:linear-gradient(135deg,#f5eaff,#fff);border-color:#dcc4f5}.success{background:#E9F8F1;color:#18794E}.modal-note{font-size:12px;color:var(--muted)}@media(max-width:520px){.order-row{grid-template-columns:1fr 58px 78px 34px}}</style>
+
+<style>
+.production-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px}
+.production-actions button{padding:6px 9px;border-radius:8px;border:1px solid #ddd;background:#fff;cursor:pointer}
+</style>
+</head>
+<body>
+<header><div class="brand">💜 Roxo Mania</div><div class="subtitle">Muito mais que açaí. Uma experiência.</div></header>
+<main>
+
+<section id="home" class="show">
+<div class="hello"><h1>Resumo de hoje</h1><small id="todayText"></small></div>
+<div class="grid">
+<div class="card"><div class="label">💰 Faturamento</div><div class="value green" id="todayRevenue">R$ 0,00</div></div>
+<div class="card"><div class="label">🥤 Vendidas</div><div class="value purple" id="todayQty">0</div></div>
+<div class="card"><div class="label">📦 Estoque</div><div class="value purple" id="stockValue">0</div><div id="stockBadge" class="badge purple">disponíveis</div></div>
+<div class="card"><div class="label">🎯 Meta do dia</div><div class="value" id="goalValue">R$ 300,00</div></div>
+<div class="card"><div class="label">📦 Produção hoje</div><div class="value purple" id="productionValue">0</div></div>
+
+<div class="card capital"><div class="label">💼 Capital de giro disponível</div><div class="value purple" id="workingCapital">R$ 0,00</div><div class="kpi-note" id="workingCapitalNote">Reserva separada da operação • meta configurada</div></div>
+
+<div class="card full"><div class="total"><div><div class="label">Progresso da meta</div><strong id="goalPercent">0%</strong></div><span>🚀</span></div><div class="progress"><div id="goalBar"></div></div></div>
+</div>
+<div class="actions" style="margin-top:14px"><button class="secondary" onclick="showTab('sell')">🧾 Nova venda</button><button class="secondary" onclick="showTab('production')">📦 Registrar produção</button><button class="ghost" onclick="showTab('settings')">⚙️ Configurações</button></div>
+<div id="stockNotice" class="notice">💜 Estoque calculado automaticamente: produção + estoque inicial − vendas.</div>
+</section>
+
+<section id="sell">
+<div class="top-actions"><button class="secondary" type="button" onclick="showTab('clients')">👥 Cadastrar / clientes</button></div>
+<h2>🧾 Registrar venda</h2>
+<div class="card">
+<form onsubmit="addSale(event)">
+<div class="field"><label>Data</label><input id="saleDate" type="date" required></div>
+<div class="row"><div class="field"><label>Nome do cliente</label><input id="customerName" list="clientSuggestions" type="text" placeholder="Ex.: Maria" required><datalist id="clientSuggestions"></datalist></div><div class="field"><label>WhatsApp do cliente</label><input id="customerPhone" type="tel" inputmode="tel" placeholder="(99) 99999-9999" required></div></div>
+<div class="total"><div><div class="label">Itens do pedido</div><strong id="orderTotal">R$ 0,00</strong><div class="mini" id="deliveryFeeInfo">Taxa de entrega: R$ 0,00</div></div><span>🥤</span></div>
+<div id="orderItems" class="order-items"></div>
+<button class="secondary" type="button" onclick="addOrderItem()">➕ Adicionar sabor</button>
+<div class="row"><div class="field"><label>Forma de pagamento</label><select id="paymentMethod" required><option value="">Selecione</option><option>Pix</option><option>Dinheiro</option><option>Cartão</option></select></div><div class="field"><label>Entrega / retirada</label><select id="deliveryMethod" required><option value="">Selecione</option><option value="Retirada">Retirada — R$ 0,00</option><option value="Entrega">Entrega — + R$ 3,00</option><option value="Entrega grátis">Entrega grátis — R$ 0,00</option></select></div></div>
+<div class="field"><label>Endereço / ponto de retirada</label><input id="customerAddress" type="text" placeholder="Opcional"></div>
+<div class="field"><label>Observação do pedido</label><input id="saleNote" type="text" placeholder="Ex.: sem leite condensado"></div>
+<div id="saleStockInfo" class="notice">Estoque disponível: 0</div>
+<div class="actions"><button class="primary" type="submit">💜 Salvar venda e enviar no WhatsApp</button><button class="ghost" type="button" id="cancelEditBtn" onclick="cancelEditSale()" style="display:none">Cancelar edição</button></div>
+</form></div>
+<div class="notice">Os preços são puxados dos produtos cadastrados. Você pode adicionar novos produtos em <strong>⚙️ Configurações → Produtos</strong>.</div>
+<h2 style="margin-top:24px">🧾 Pedidos</h2><div class="mini" style="margin-bottom:10px">Aqui ficam os pedidos realizados. Você pode editar ou apagar uma venda individual.</div><div id="salesList" class="list"></div>
+</section>
+<section id="clients">
+<h2>👥 Clientes</h2>
+<div class="card">
+<form onsubmit="saveClient(event)">
+<div class="field"><label>Nome do cliente</label><input id="clientFormName" type="text" placeholder="Ex.: Maria" required></div>
+<div class="row">
+<div class="field"><label>WhatsApp</label><input id="clientFormPhone" type="tel" inputmode="tel" placeholder="(99) 99999-9999" required></div>
+<div class="field"><label>Endereço</label><input id="clientFormAddress" type="text" placeholder="Rua, bairro..."></div>
+</div>
+<div class="field"><label>Observação</label><input id="clientFormNote" type="text" placeholder="Ex.: cliente prefere entrega"></div>
+<button class="primary" type="submit">👥 Cadastrar cliente</button>
+</form>
+</div>
+<div style="height:14px"></div>
+<div class="card">
+<div class="total"><div><div class="label">Cadastro</div><h3>Clientes cadastrados</h3></div><span>💜</span></div>
+<div id="clientsList" class="list"></div>
+</div>
+<div class="notice">💜 Ao registrar uma venda, o cliente também é salvo/atualizado automaticamente no cadastro.</div>
+</section>
+
+<section id="reports">
+<h2>📊 Relatórios</h2>
+<div class="grid"><div class="card"><div class="label">Total vendido</div><div class="value green" id="allRevenue">R$ 0,00</div></div><div class="card"><div class="label">Unidades</div><div class="value purple" id="allQty">0</div></div><div class="card"><div class="label">Ticket médio</div><div class="value purple" id="avgTicket">R$ 0,00</div></div><div class="card"><div class="label">Clientes</div><div class="value purple" id="customerCount">0</div></div></div>
+<div style="height:14px"></div><div class="card"><div class="field"><label>Mês do relatório</label><select id="reportMonth" onchange="render()"></select></div><div style="height:8px"></div><div class="mini">Cada mês começa do zero no relatório, sem apagar os meses anteriores. Você pode voltar a qualquer mês para consultar faturamento, unidades, clientes, ticket médio e lucro.</div><div style="height:12px"></div><div id="reportSummary" class="notice"></div></div>
+<div style="height:14px"></div><div class="notice">📊 Aqui ficam apenas os relatórios e resultados. Para consultar, editar ou apagar pedidos, use a aba <strong>Venda</strong>.</div>
+<div style="height:14px"></div><div class="card"><h3 style="margin-bottom:10px">📚 Histórico dos meses</h3><div id="monthlyHistory" class="list"></div></div>
+<div style="height:14px"></div><div class="top-actions"><button class="secondary" type="button" onclick="showTab('clients')">👥 Cadastrar / clientes</button></div>
+</section>
+
+<section id="profit">
+<h2>💚 Lucros</h2>
+<div class="grid">
+  <div class="card"><div class="label">📈 Lucro estimado hoje</div><div class="value green" id="todayProfit">R$ 0,00</div></div>
+  <div class="card"><div class="label">📅 Lucro no mês</div><div class="value green" id="monthProfit">R$ 0,00</div></div>
+  <div class="card"><div class="label">💚 Lucro disponível</div><div class="value green" id="profitAvailable">R$ 0,00</div><div class="kpi-note">Lucro reservado − saídas do lucro</div></div>
+</div>
+<div style="height:14px"></div>
+<div class="card" id="profitDashboard">
+  <h2>📈 Resumo de Lucro</h2>
+  <div class="field" style="margin-bottom:12px">
+    <label>Mês do resumo</label>
+    <input id="profitMonth" type="month">
+  </div>
+  <div id="profitMonthTotal" class="mini"></div>
+  <div id="profitDaysList"></div>
+</div>
+<div style="height:14px"></div>
+<div class="card"><h3 style="margin-bottom:8px">💳 Registrar saída do lucro</h3><p class="mini">Use quando você comprar algo usando o dinheiro que já foi separado como lucro. Essa saída reduz somente o lucro disponível, sem mexer no saldo do caixa.</p><form onsubmit="addProfitExpense(event)"><div class="row"><div class="field"><label>Valor</label><input id="profitExpenseValue" type="number" min="0" step=".01" required></div><div class="field"><label>Descrição</label><input id="profitExpenseDescription" type="text" placeholder="Ex.: Compra paga com o lucro"></div></div><button class="secondary" type="submit">💳 Registrar saída do lucro</button></form></div>
+<div style="height:14px"></div>
+<div class="card"><h3 style="margin-bottom:10px">📚 Histórico dos meses</h3><div id="profitMonthlyHistory" class="list"></div></div>
+</section>
+
+<section id="production">
+<h2>📦 Produção</h2>
+<div class="top-actions"><button class="secondary" type="button" onclick="showTab('products')">🛍️ Gerenciar produtos</button></div>
+<div class="card"><form onsubmit="saveProduction(event)"><div class="field"><label>Quantidade produzida</label><input id="productionQty" type="number" min="1" required></div><div class="field"><label>Observação</label><input id="productionNote" type="text" placeholder="Ex.: produção da manhã"></div><button class="primary" type="submit">📦 Salvar produção</button></form></div>
+<div style="height:12px"></div><div class="card"><h3 style="margin-bottom:8px">🥤 Retirada para consumo próprio</h3><p class="mini">Use quando retirar uma garrafinha do estoque para você ou para consumo da família. Ela sai do estoque, mas não entra como venda nem movimenta o caixa.</p><form onsubmit="addStockWithdrawal(event)"><div class="row"><div class="field"><label>Quantidade</label><input id="withdrawalQty" type="number" min="1" step="1" required></div><div class="field"><label>Observação</label><input id="withdrawalNote" type="text" placeholder="Ex.: tomei uma garrafinha"></div></div><button class="secondary" type="submit">🥤 Registrar retirada</button></form></div>
+<div style="height:14px"></div><div class="grid"><div class="card"><div class="label">Estoque disponível</div><div class="value purple" id="productionStock">0</div></div><div class="card"><div class="label">Produção registrada hoje</div><div class="value purple" id="productionToday">0</div></div><div class="card full"><div class="label">Produção total</div><div class="value purple" id="productionTotal">0</div></div></div>
+<div style="height:14px"></div><div class="card"><h3 style="margin-bottom:6px">Histórico de produção</h3><div class="mini" style="margin-bottom:12px">Edite ou apague qualquer produção ou retirada. O estoque é recalculado automaticamente.</div><div id="productionList" class="list"></div></div>
+</section>
+
+<section id="cash">
+<h2>💵 Caixa</h2>
+
+<div style="height:12px"></div>
+<div class="card"><div class="total"><div><div class="label">📅 Caixa de hoje</div><h3 id="cashDayStatus">Caixa fechado</h3><div class="mini" id="cashDayInfo">Abra o caixa para registrar o saldo inicial.</div></div><span id="cashDayIcon">🔒</span></div><div class="actions"><button id="openCashBtn" class="primary" type="button" onclick="openCash()">🔓 Abrir caixa</button><button id="editOpeningCashBtn" class="secondary" type="button" onclick="editOpeningCash()" style="display:none">✏️ Editar saldo inicial</button><button id="closeCashBtn" class="secondary" type="button" onclick="closeCash()" style="display:none">🔒 Fechar caixa</button></div></div>
+<div style="height:12px"></div>
+<div class="card"><form onsubmit="addCash(event)"><div class="row"><div class="field"><label>Tipo</label><select id="cashType"><option value="Entrada">Entrada</option><option value="Saída">Saída</option></select></div><div class="field"><label>Valor</label><input id="cashValue" type="number" min="0" step=".01" required></div></div><div class="field"><label>Descrição</label><input id="cashDescription" type="text" placeholder="Ex.: compra de ingredientes"></div><div class="actions"><button id="cashSubmitBtn" class="primary" type="submit">💰 Registrar movimento</button><button id="cancelCashEditBtn" class="secondary" type="button" onclick="cancelCashEdit()" style="display:none">Cancelar edição</button></div></form></div>
+<div style="height:12px"></div><div class="card"><h3 style="margin-bottom:8px">💚 Separar lucro</h3><p class="mini">Registre o valor do lucro que você retirou do caixa e deixou separado. Isso não é uma despesa da empresa.</p><form onsubmit="separateProfit(event)"><div class="row"><div class="field"><label>Valor do lucro</label><input id="profitValue" type="number" min="0" step=".01" required></div><div class="field"><label>Descrição</label><input id="profitDescription" type="text" placeholder="Ex.: Lucro separado do dia"></div></div><button class="primary" type="submit">💚 Separar lucro</button></form></div>
+<div style="height:12px"></div><div class="card capital"><h3 style="margin-bottom:8px">🏦 Capital de giro</h3><p class="mini">Esta é uma reserva separada da operação. A meta fica guardada e o saldo só muda quando você repõe ou usa o capital de giro.</p><div class="grid"><div class="card"><div class="label">Saldo atual</div><div class="value purple" id="cashWorkingCapital">R$ 0,00</div></div><div class="card"><div class="label">Meta</div><div class="value" id="cashWorkingCapitalGoal">R$ 0,00</div></div><div class="card full"><div class="label">Falta para completar a meta</div><div class="value green" id="cashWorkingCapitalGap">R$ 0,00</div></div></div><div style="height:10px"></div><form onsubmit="moveWorkingCapital(event)"><div class="row"><div class="field"><label>Movimento</label><select id="workingCapitalType"><option value="replenish_cash">Repor usando o caixa</option><option value="replenish_profit">Repor usando o lucro separado</option><option value="withdraw">Usar capital de giro</option></select></div><div class="field"><label>Valor</label><input id="workingCapitalValue" type="number" min="0" step=".01" required></div></div><div class="field"><label>Descrição</label><input id="workingCapitalDescription" type="text" placeholder="Ex.: Reposição da reserva / compra emergencial"></div><button class="primary" type="submit">🏦 Registrar movimento do capital</button></form><div style="height:10px"></div><div id="workingCapitalHistory" class="list"></div></div>
+<div style="height:14px"></div><div class="grid"><div class="card"><div class="label">Entradas</div><div class="value green" id="cashIn">R$ 0,00</div></div><div class="card"><div class="label">Saídas</div><div class="value red" id="cashOut">R$ 0,00</div></div><div class="card"><div class="label">💚 Lucro separado do dia</div><div class="value green" id="cashProfitSeparatedToday">R$ 0,00</div><div class="kpi-note">Valor separado do caixa como lucro</div></div><div class="card full"><div class="label">Saldo do caixa</div><div class="value purple" id="cashBalance">R$ 0,00</div><div class="kpi-note">Dinheiro que permanece no caixa</div></div></div>
+<div style="height:14px"></div><div class="card"><h3 style="margin-bottom:12px">Movimentações</h3><div id="cashList" class="list"></div></div>
+<div style="height:14px"></div><div class="card"><h3>📚 Histórico dos caixas</h3><div class="mini">Este é o único local para consultar, editar, reabrir ou apagar caixas anteriores.</div><div id="editableCashHistory" class="list"></div></div>
+</section>
+
+<section id="products">
+<h2>🛍️ Produtos</h2>
+<div class="card"><form onsubmit="saveProduct(event)"><div class="field"><label>Nome do produto</label><input id="productName" type="text" placeholder="Ex.: Açaí tradicional" required></div><div class="row"><div class="field"><label>Preço de venda</label><input id="productPrice" type="number" min="0" step=".01" required></div><div class="field"><label>Custo estimado</label><input id="productCost" type="number" min="0" step=".01" required></div></div><div class="field"><label>Categoria</label><input id="productCategory" type="text" placeholder="Ex.: Açaí"></div><div class="field"><label>Tipo de estoque</label><select id="productStockItem"><option value="bottle">Garrafinha de açaí — desconta 1 garrafinha do estoque</option><option value="additional">Adicional/creme — NÃO desconta garrafinha</option></select></div><div class="actions"><button id="productSubmitBtn" class="primary" type="submit">➕ Cadastrar produto</button><button id="cancelProductEditBtn" class="secondary" type="button" onclick="cancelProductEdit()" style="display:none">Cancelar edição</button></div></form></div>
+<div style="height:14px"></div><div class="card"><h3 style="margin-bottom:12px">Produtos cadastrados</h3><div id="productsList" class="list"></div></div>
+<div class="notice">💜 Produtos novos ficam disponíveis imediatamente na tela de venda.</div>
+</section>
+
+<section id="settings">
+<h2>⚙️ Configurações e backup</h2>
+<div class="card"><form onsubmit="saveSettings(event)"><div class="field"><label>Preço de venda por garrafinha</label><input id="settingPrice" type="number" min="0" step=".01"></div><div class="field"><label>Custo médio estimado por garrafinha</label><input id="settingCost" type="number" min="0" step=".01"></div><div class="field"><label>Meta de faturamento do dia</label><input id="settingGoal" type="number" min="0" step=".01"></div><div class="field"><label>Estoque inicial</label><input id="settingInitialStock" type="number" min="0" step="1"></div><div class="field"><label>Aviso de estoque baixo a partir de</label><input id="settingLowStock" type="number" min="0" step="1"></div><div class="field"><label>Meta de capital de giro</label><input id="settingWorkingCapitalGoal" type="number" min="0" step=".01"></div><button class="primary" type="submit">💾 Salvar configurações</button></form></div>
+<div class="top-actions"><button type="button" class="secondary" onclick="showTab('products')">🛍️ Gerenciar produtos</button></div>
+<div style="height:14px"></div><div class="card"><h3>💼 Capital de giro</h3><p class="mini">O capital de giro é uma reserva separada. Defina uma meta e use a tela do Caixa para repor ou usar essa reserva quando necessário.</p><div class="grid"><div class="card"><div class="label">Disponível</div><div class="value purple" id="settingsWorkingCapital">R$ 0,00</div></div><div class="card"><div class="label">Meta</div><div class="value" id="settingsWorkingCapitalGoalView">R$ 0,00</div></div></div></div>
+<div style="height:14px"></div><div class="card"><h3>💾 Backup dos dados</h3><p class="mini">Exporte uma cópia das vendas, produção, caixa e configurações. O arquivo pode ser importado neste aparelho depois.</p><div class="actions"><button class="secondary" onclick="exportBackup()">⬇️ Exportar backup</button><button class="secondary" onclick="document.getElementById('importFile').click()">⬆️ Importar backup</button></div><input id="importFile" type="file" accept="application/json,.json" style="display:none" onchange="importBackup(event)"></div>
+<div class="notice">💜 Os dados continuam salvos no navegador deste dispositivo. O backup permite guardar uma cópia fora dele.</div>
+</section>
+
+
+</main>
+
+<nav>
+<button id="n-home" class="active" onclick="showTab('home')"><span class="nav-icon">🏠</span>Início</button>
+<button id="n-sell" onclick="showTab('sell')"><span class="nav-icon">🧾</span>Venda</button>
+<button id="n-reports" onclick="showTab('reports')"><span class="nav-icon">📊</span>Relatório</button>
+<button id="n-profit" onclick="showTab('profit')"><span class="nav-icon">💚</span>Lucro</button>
+<button id="n-production" onclick="showTab('production')"><span class="nav-icon">📦</span>Produção</button>
+<button id="n-cash" onclick="showTab('cash')"><span class="nav-icon">💵</span>Caixa</button>
+</nav>
+
+<script>
+const KEY="roxoManiaAtualizadoV6";
+const OLD_KEYS=["roxoManiaAtualizadoV8","roxoManiaAtualizadoV7","roxoManiaAtualizadoV5","roxoManiaAtualizadoV4","roxoManiaAtualizadoV3"];
+const defaultProducts=[
+ {id:"tradicional",name:"Tradicional",price:15,cost:8.48,category:"Açaí",stockItem:true,active:true},
+ {id:"ninho",name:"Creme de Ninho",price:15,cost:11.48,category:"Açaí",stockItem:true,active:true},
+ {id:"maracuja",name:"Creme de maracujá",price:15,cost:10.58,category:"Açaí",stockItem:true,active:true},
+ {id:"avelã",name:"Creme de avelã",price:15,cost:12.48,category:"Açaí",stockItem:true,active:true},
+ {id:"morango",name:"Creme de morango",price:15,cost:10.98,category:"Açaí",stockItem:true,active:true}
+];
+const defaults={sales:[],cash:[],cashDays:{},production:[],stockWithdrawals:[],profitAdjustments:[],products:defaultProducts,clients:[],workingCapitalMovements:[],settings:{price:15,cost:10,goal:300,initialStock:0,lowStock:5,workingCapitalGoal:500,workingCapitalBalance:0,businessDate:"2026-09-01"}};
+
+function inferStockItem(p){
+  const c=String(p?.category||"").toLowerCase();
+  const n=String(p?.name||"").toLowerCase().trim();
+  const id=String(p?.id||"").toLowerCase();
+  const price=Number(p?.price||0);
+  // Tradicional is always a bottle product, never an add-on.
+  if(id==="tradicional" || n==="tradicional" || n==="açaí tradicional" || n==="acai tradicional") return true;
+  // Depois que o produto foi cadastrado, o campo "Tipo de estoque" é a fonte
+  // de verdade. Não usamos o nome/preço para sobrescrever essa escolha.
+  if(typeof p?.stockItem==="boolean") return p.stockItem;
+  if(c.includes("adicional")||c.includes("extra")||c.includes("complement")||
+     n.includes("adicional")||n.includes("extra")||n.includes("complement")||
+     n.includes("cobertura")||n.includes("paçoca")||n.includes("pacoca")) return false;
+  if(price>0 && price<10) return false;
+  // Produtos antigos sem definição de estoque e categorizados como açaí
+  // são tratados como garrafinhas.
+  if(c.includes("açaí")||c.includes("acai")) return true;
+  return true;
+}
+function productConsumesBottle(p){return !!p && inferStockItem(p);}
+
+function normalizeData(base){
+  const out={...defaults,...base,settings:{...defaults.settings,...(base.settings||{})}};
+  out.products=(Array.isArray(base.products)&&base.products.length?base.products:structuredClone(defaultProducts)).map(p=>({...p,stockItem:inferStockItem(p)}));
+  out.clients=Array.isArray(base.clients)?base.clients:[];
+  out.cashDays=base.cashDays&&typeof base.cashDays==="object"?base.cashDays:{};
+  out.stockWithdrawals=Array.isArray(base.stockWithdrawals)?base.stockWithdrawals:[];
+  out.profitAdjustments=Array.isArray(base.profitAdjustments)?base.profitAdjustments:[];
+  out.workingCapitalMovements=Array.isArray(base.workingCapitalMovements)?base.workingCapitalMovements:[];
+  out.settings.workingCapitalGoal=Math.max(0,Number(out.settings.workingCapitalGoal)||0);
+  out.settings.workingCapitalBalance=Math.max(0,Number(out.settings.workingCapitalBalance)||0);
+  out.settings.businessDate=out.settings.businessDate||"2026-09-01";
+  // Repair the current product master: Açaí products are bottles, not add-ons.
+  out.products=out.products.map(p=>({ ...p, stockItem: inferStockItem({ ...p, stockItem: (String(p.id||"").toLowerCase()==="tradicional" || String(p.category||"").toLowerCase().includes("açaí")||String(p.category||"").toLowerCase().includes("acai")) ? true : p.stockItem }) }));
+  out.products=out.products.map(p=>String(p.id||"").toLowerCase()==="tradicional"?{...p,category:"Açaí",stockItem:true}:{...p});
+  out.sales=(base.sales||[]).map(s=>{
+    const items=Array.isArray(s.items)&&s.items.length?s.items:[{productId:s.productId||String(s.flavor||"").toLowerCase(),name:s.flavor||"Produto",qty:Number(s.qty||1),price:Number(s.price||0),cost:Number(s.cost||out.settings.cost||10),total:Number(s.total||0)}];
+    const subtotal=s.subtotal!=null?Number(s.subtotal):items.reduce((a,i)=>a+Number(i.total||0),0);
+    const deliveryFee=s.deliveryFee!=null?Number(s.deliveryFee):Math.max(0,Number(s.total||0)-subtotal);
+    const total=s.total!=null?Number(s.total):subtotal+deliveryFee;
+    const qty=Number(s.qty||items.reduce((a,i)=>a+Number(i.qty||0),0));
+    const costTotal=s.costTotal!=null?Number(s.costTotal):items.reduce((a,i)=>a+Number(i.cost||0)*Number(i.qty||0),0);
+    return {...s,items:items.map(i=>{
+      const p=out.products.find(x=>x.id===i.productId);
+      const isTradicional = String(i.productId||"").toLowerCase()==="tradicional" || /^(açaí )?tradicional$/i.test(String(i.name||"").trim());
+      const inferred = isTradicional
+        ? true
+        : (typeof i.stockItem==="boolean"
+          ? i.stockItem
+          : (p ? productConsumesBottle(p) : !/adicional|extra|creme|cobertura|paçoca|pacoca/i.test(String(i.name||""))));
+      return {...i,stockItem:inferred,legacyStockRule:true};
+    }),qty,subtotal,deliveryFee,total,costTotal};
+  });
+  return out;
+}
+
+function ensureProductCatalog(){
+  // Garante que o catálogo principal continue disponível sem apagar
+  // produtos personalizados já cadastrados.
+  if(!Array.isArray(data.products)) data.products=[];
+  // If a previous version left an empty product list, rebuild only the
+  // standard catalog; never touch sales, cash or stock quantities.
+  if(data.products.length===0) data.products=[];
+  const price=Number(data.settings?.price)||20;
+  const cost=Number(data.settings?.cost)||0;
+  const standard=[
+    {id:"tradicional",name:"Tradicional",category:"Açaí"},
+    {id:"ninho",name:"Creme de Ninho",category:"Açaí"},
+    {id:"maracuja",name:"Creme de maracujá",category:"Açaí"},
+    {id:"avelã",name:"Creme de avelã",category:"Açaí"},
+    {id:"morango",name:"Creme de morango",category:"Açaí"}
+  ];
+  const ids=new Set(data.products.map(p=>String(p.id||"").toLowerCase()));
+  standard.forEach(p=>{
+    if(!ids.has(p.id.toLowerCase())){
+      data.products.push({...p,price,cost,stockItem:true,active:true});
+    }
+  });
+  // Rename the old product id/name to the current official name without creating a duplicate.
+  const oldNinho=data.products.find(p=>String(p.id||"").toLowerCase()==="leitinho");
+  const currentNinho=data.products.find(p=>String(p.id||"").toLowerCase()==="ninho");
+  if(oldNinho && !currentNinho){ oldNinho.id="ninho"; oldNinho.name="Creme de Ninho"; }
+  else if(oldNinho && currentNinho){ data.products=data.products.filter(p=>p!==oldNinho); }
+  data.products=data.products.map(p=>({
+    ...p,
+    name:(String(p.id||"").toLowerCase()==="ninho" ? "Creme de Ninho" : p.name),
+    stockItem:true,
+    active:true
+  }));
+}
+
+function migrateHistoricalStockOnly(){
+  // Inventory-only migration. Sales totals, prices, costs, profit and cash
+  // are deliberately untouched.
+  data.products=(data.products||[]).map(p=>({...p,stockItem:inferStockItem(p)}));
+  data.sales=(data.sales||[]).map(s=>({...s,items:(s.items||[]).map(i=>({
+    ...i,
+    stockItem:typeof i.stockItem==="boolean" ? i.stockItem : itemConsumesBottle(i),
+    legacyStockRule:true
+  }))}));
+}
+
+
+function migrateInitialStockToProduction(){
+  // V27: moves the original 25-bottle starting stock into Production.
+  // This changes ONLY inventory/production bookkeeping. No sales, prices,
+  // costs, profit, cash or financial entries are modified.
+  if(data.settings?.v27InitialStockMoved) return;
+  const initial=Number(data.settings?.initialStock||0);
+  if(initial===25){
+    const existingTotal=(data.production||[]).reduce((a,x)=>a+Number(x.qty||0),0);
+    const dates=(data.production||[]).map(x=>x.date).filter(Boolean);
+    const firstDate=dates.length?dates.slice().sort()[0]:today();
+    data.production.unshift({
+      id:"v27-initial-25-"+Date.now(),
+      date:firstDate,
+      qty:25,
+      note:"1ª produção — transferida do estoque inicial"
+    });
+    data.settings.initialStock=0;
+
+    // The current Roxo Mania record shows 80 units in Production while the
+    // user-defined four 5 L batches total 100. After moving the 25 initial
+    // units, reduce the excess 5 from the latest production record so the
+    // production history closes at 100. This is inventory-only.
+    const afterMove=existingTotal+25;
+    if(afterMove===105 && data.production.length>1){
+      let remaining=5;
+      for(let i=1;i<data.production.length && remaining>0;i++){
+        const item=data.production[i];
+        const q=Number(item.qty||0);
+        const cut=Math.min(q,remaining);
+        item.qty=q-cut;
+        remaining-=cut;
+      }
+      data.production=data.production.filter(x=>Number(x.qty||0)>0);
+    }
+  }
+  data.settings.v27InitialStockMoved=true;
+}
+
+
+function migrateV28InventoryOnly(){
+  if(data.settings?.v28InventoryCorrectionApplied) return;
+  // This +1 corrects the single historical additional that had incorrectly
+  // consumed a bottle. It changes inventory only, never sales totals or money.
+  data.settings.v28HistoricalStockAdjustment=0;
+  data.settings.v28InventoryCorrectionApplied=true;
+}
+
+
+function migrateV30ConfirmedInventory(){
+  if(data.settings?.v30HistoricalStockBaselineSet) return;
+
+  // User-confirmed August historical state. Everything that existed before
+  // the new September control remains historical and must not affect the
+  // new cycle's sales/stock figures or cash.
+  data.settings.v30HistoricalStockBaseline=14;
+  data.settings.v30HistoricalSalesUnits=76;
+  data.settings.v30HistoricalStockBaselineSet=true;
+
+  (data.sales||[]).forEach(s=>{s.v30Historical=true});
+  (data.production||[]).forEach(p=>{p.v30Historical=true});
+  (data.stockWithdrawals||[]).forEach(w=>{w.v30Historical=true});
+  (data.cash||[]).forEach(x=>{x.v30Historical=true});
+  Object.values(data.cashDays||{}).forEach(d=>{d.v30Historical=true});
+}
+
+function migrateSeptemberReset(){
+  if(data.settings?.v32SeptemberResetApplied) return;
+
+  // August remains in the historical record. The new September cycle starts
+  // from zero for sales and bottle stock, without deleting or changing the
+  // old financial history.
+  data.settings.v32SeptemberStockBaseline=25;
+  data.settings.v32SeptemberSalesUnits=0;
+  data.settings.v32SeptemberResetApplied=true;
+}
+
+function lockSeptemberInventoryOnce(){
+  if(data.settings?.v45SeptemberInventoryLocked) return;
+  // The user explicitly restarted inventory for September at 25 bottles.
+  // Everything already present before this correction belongs to the August/history
+  // side of the ledger. New production/sales/withdrawals created after this lock
+  // have no v45Historical flag and therefore affect the September stock normally.
+  data.settings.v45SeptemberStockBaseline=25;
+  (data.production||[]).forEach(x=>{x.v45Historical=true;});
+  (data.sales||[]).forEach(x=>{x.v45Historical=true;});
+  (data.stockWithdrawals||[]).forEach(x=>{x.v45Historical=true;});
+  data.settings.v45SeptemberInventoryLocked=true;
+}
+
+function loadData(){
+  for(const k of [KEY,...OLD_KEYS]){try{const raw=JSON.parse(localStorage.getItem(k));if(raw){const migrated=normalizeData(raw);if(!("initialStock" in (raw.settings||{}))){const sold=migrated.sales.reduce((a,x)=>a+Number(x.qty||x.items?.reduce((z,i)=>z+i.qty,0)||0),0);const produced=(migrated.production||[]).reduce((a,x)=>a+Number(x.qty||0),0);migrated.settings.initialStock=Math.max(0,sold-produced)}return migrated}}catch(e){}}
+  return normalizeData(structuredClone(defaults));
+}
+let data=loadData();ensureProductCatalog();lockSeptemberInventoryOnce();data.settings.v45CatalogRepairApplied=true;save();
+// V32: start the user's new monthly control in September without changing the financial values.
+(function startSeptemberControl(){
+  if(data.settings?.v32SeptemberStarted) return;
+  const from=realToday();
+  const target="2026-09-01";
+  const moveDate=(d)=>d===from?target:d;
+  (data.sales||[]).forEach(s=>{if(s.date===from)s.date=target;});
+  (data.cash||[]).forEach(x=>{if(x.date===from)x.date=target;});
+  (data.production||[]).forEach(x=>{if(x.date===from)x.date=target;});
+  (data.stockWithdrawals||[]).forEach(x=>{if(x.date===from)x.date=target;});
+  (data.profitAdjustments||[]).forEach(x=>{if(x.date===from)x.date=target;});
+  (data.workingCapitalMovements||[]).forEach(x=>{if(x.date===from)x.date=target;});
+  if(data.cashDays?.[from]){data.cashDays[target]=data.cashDays[from];delete data.cashDays[from];}
+  data.settings.businessDate=target;
+  data.settings.v32SeptemberStarted=true;
+})();
+save();
+// V46: isolate the new cash cycle. Any cash movement that existed before the new
+// cycle was opened must not inflate the opening/expected balance. Future movements
+// are recorded normally.
+(function isolateNewCashCycle(){
+  if(data.settings?.v46CashIsolationApplied) return;
+  const cycleDate=data.settings?.businessDate||realToday();
+  (data.cash||[]).forEach(x=>{
+    if(x.date===cycleDate) x.v46HistoricalCash=true;
+  });
+  data.settings.v46CashIsolationApplied=true;
+  save();
+})();
+function isCurrentCashMovement(x){return x && x.date===today() && !x.v46HistoricalCash;}
+repairSaleCashEntries();
+let editingSaleId=null;
+let editingProductId=null;
+let editingCashId=null;
+let cashViewDate=null;
+let editingProductionId=null;
+let editingStockWithdrawalId=null;
+const brl=v=>Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+function moneyInput(raw){
+  if(raw===null || raw===undefined) return NaN;
+  let s=String(raw).trim().replace(/R\$|BRL/gi,"").replace(/\s/g,"");
+  if(!s) return NaN;
+  // Accept values copied/formatted by iPhone as 50,00, 50.00, R$ 50,00, etc.
+  if(s.includes(",") && s.includes(".")){
+    // The last separator is treated as the decimal separator.
+    const lastComma=s.lastIndexOf(","), lastDot=s.lastIndexOf(".");
+    if(lastComma>lastDot) s=s.replace(/\./g,"").replace(",",".");
+    else s=s.replace(/,/g,"");
+  }else if(s.includes(",")){
+    s=s.replace(/\./g,"").replace(",",".");
+  }
+  const n=Number(s);
+  return Number.isFinite(n)?n:NaN;
+}
+const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+function save(){localStorage.setItem(KEY,JSON.stringify(data))}
+function realToday(){const d=new Date();const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),day=String(d.getDate()).padStart(2,"0");return `${y}-${m}-${day}`}
+function today(){return data?.settings?.businessDate||realToday()}
+function dateBR(d){return d?new Date(d+"T12:00:00").toLocaleDateString("pt-BR"):""}
+function showTab(id){document.querySelectorAll("main > section").forEach(s=>s.classList.remove("show"));const target=document.getElementById(id);if(target)target.classList.add("show");document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));const n=document.getElementById("n-"+id);if(n)n.classList.add("active");render();window.scrollTo({top:0,behavior:"smooth"})}
+function normalizeWhatsApp(phone){let d=String(phone||"").replace(/\D/g,"");if(d.startsWith("00"))d=d.slice(2);if(d.startsWith("55"))return d;if(d.length===10||d.length===11)return"55"+d;return""}
+function productById(id){return data.products.find(p=>p.id===id)}
+function activeProducts(){return data.products.filter(p=>p.active!==false)}
+function addOrderItem(productId="",qty=1){const wrap=document.getElementById("orderItems");const row=document.createElement("div");row.className="order-row";row.innerHTML=`<select class="order-product" required><option value="">Sabor/produto</option>${activeProducts().map(p=>`<option value="${esc(p.id)}" ${p.id===productId?"selected":""}>${esc(p.name)} — ${brl(p.price)}</option>`).join("")}</select><input class="order-qty" type="number" min="1" value="${qty}" required><input class="order-price" type="number" min="0" step=".01" value="0" required><button type="button" class="remove" onclick="this.parentElement.remove();updateOrderTotal()">×</button>`;wrap.appendChild(row);const sel=row.querySelector(".order-product"),price=row.querySelector(".order-price");sel.addEventListener("change",()=>{const p=productById(sel.value);price.value=p?p.price:0;updateOrderTotal()});row.querySelector(".order-qty").addEventListener("input",updateOrderTotal);price.addEventListener("input",updateOrderTotal);document.getElementById("deliveryMethod")?.addEventListener("change",updateOrderTotal);if(productId){const p=productById(productId);price.value=p?p.price:0}updateOrderTotal()}
+function orderItemsFromForm(){return [...document.querySelectorAll(".order-row")].map(r=>{const id=r.querySelector(".order-product").value,p=productById(id),qty=Number(r.querySelector(".order-qty").value),price=Number(r.querySelector(".order-price").value);return p&&qty>0?{productId:id,name:p.name,qty,price,cost:Number(p.cost||0),stockItem:productConsumesBottle(p),total:qty*price}:null}).filter(Boolean)}
+const DELIVERY_FEE=3;
+function getDeliveryFee(){const v=document.getElementById("deliveryMethod")?.value;return v==="Entrega"?DELIVERY_FEE:0}
+function updateOrderTotal(){const items=orderItemsFromForm(),subtotal=items.reduce((a,i)=>a+i.total,0),fee=getDeliveryFee(),total=subtotal+fee;document.getElementById("orderTotal").textContent=brl(total);const feeInfo=document.getElementById("deliveryFeeInfo");if(feeInfo)feeInfo.textContent=`Taxa de entrega: ${brl(fee)}`;const qty=items.reduce((a,i)=>a+i.qty,0);document.getElementById("saleStockInfo").textContent=`Estoque disponível agora: ${stock()} garrafinha(s) • Este pedido: ${qty} unidade(s)`}
+
+function whatsappMessage(s){const lines=["💜 *Roxo Mania*","",`Olá, ${s.customerName}! Seu pedido foi registrado com sucesso. 🥤`,"","🧾 *Detalhes do pedido:*",...s.items.map(i=>`• ${i.qty}x ${i.name} — ${brl(i.total)}`),"",`💰 *Subtotal: ${brl(s.subtotal??s.total)}*`,s.deliveryFee?`🛵 *Taxa de entrega: ${brl(s.deliveryFee)}*`:"",`💰 *Total: ${brl(s.total)}*`,`• Pagamento: ${s.payment}`,`• ${s.delivery}${s.address?": "+s.address:""}`,s.note?`• Observação: ${s.note}`:"","",`📅 Data: ${dateBR(s.date)}`,"","Muito mais que açaí. Uma experiência. 💜"];return lines.filter(Boolean).join("\n")}
+function totalProduced(){return data.production.reduce((a,x)=>a+Number(x.qty||0),0)}
+function itemConsumesBottle(i){
+  const p=productById(i?.productId);
+  const pid=String(i?.productId||"").toLowerCase();
+  const iname=String(i?.name||"").toLowerCase().trim();
+  if(i?.legacyStockRule && typeof i.stockItem==="boolean") return i.stockItem;
+  if(p) return productConsumesBottle(p);
+  if(pid==="tradicional" || iname==="tradicional" || iname==="açaí tradicional" || iname==="acai tradicional") return true;
+  if(typeof i?.stockItem==="boolean") return i.stockItem;
+  const text=(String(i?.name||"")+" "+String(i?.category||"")).toLowerCase();
+  if(/adicional|extra|complemento|cobertura|paçoca|pacoca/.test(text)) return false;
+  return true;
+}
+
+function totalSold(){
+  return data.sales.reduce((a,s)=>
+    a+(s.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0);
+}
+function totalStockWithdrawals(){
+  return data.stockWithdrawals.reduce((a,x)=>a+Number(x.qty||0),0);
+}
+function stock(){
+  if(data.settings?.v45SeptemberInventoryLocked){
+    const produced=(data.production||[]).filter(x=>!x.v45Historical).reduce((a,x)=>a+Number(x.qty||0),0);
+    const sold=(data.sales||[]).filter(x=>!x.v45Historical).reduce((a,s)=>a+(s.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0);
+    const withdrawals=(data.stockWithdrawals||[]).filter(x=>!x.v45Historical).reduce((a,x)=>a+Number(x.qty||0),0);
+    return Number(data.settings.v45SeptemberStockBaseline||25)+produced-sold-withdrawals;
+  }
+  if(data.settings?.v32SeptemberResetApplied){
+    const futureProduced=(data.production||[]).filter(x=>!x.v30Historical).reduce((a,x)=>a+Number(x.qty||0),0);
+    const futureSold=(data.sales||[]).filter(x=>!x.v30Historical).reduce((a,s)=>a+(s.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0);
+    const futureWithdrawals=(data.stockWithdrawals||[]).filter(x=>!x.v30Historical).reduce((a,x)=>a+Number(x.qty||0),0);
+    return Number(data.settings.v32SeptemberStockBaseline||0)+futureProduced-futureSold-futureWithdrawals;
+  }
+  if(data.settings?.v30HistoricalStockBaselineSet){
+    const futureProduced=(data.production||[]).filter(x=>!x.v30Historical).reduce((a,x)=>a+Number(x.qty||0),0);
+    const futureSold=(data.sales||[]).filter(x=>!x.v30Historical).reduce((a,s)=>a+(s.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0);
+    const futureWithdrawals=(data.stockWithdrawals||[]).filter(x=>!x.v30Historical).reduce((a,x)=>a+Number(x.qty||0),0);
+    return Number(data.settings.v30HistoricalStockBaseline||0)+futureProduced-futureSold-futureWithdrawals;
+  }
+  return Number(data.settings.initialStock||0)+totalProduced()-totalSold()-totalStockWithdrawals();
+}
+function stockClass(v){return v<=0?"stock-out":v<=Number(data.settings.lowStock||0)?"stock-low":"stock-ok"}
+
+function deleteSale(id){
+  const sale=data.sales.find(x=>x.id===id);
+  if(!sale){alert("Venda não encontrada.");return;}
+  const ok=confirm(`Apagar a venda de ${sale.customerName||"cliente"} no valor de ${brl(Number(sale.total||0))}?\\n\\nEssa ação removerá somente esta venda dos registros.`);
+  if(!ok) return;
+
+  data.sales=data.sales.filter(x=>x.id!==id);
+  save();
+  renderAll();
+  alert("Venda apagada com sucesso! 🗑️");
+}
+
+function addSale(e){
+ e.preventDefault();
+ const items=orderItemsFromForm(),date=saleDate.value,customerName=customerNameEl().value.trim(),customerPhone=customerPhoneEl().value.trim(),payment=paymentMethod.value,delivery=deliveryMethod.value,address=customerAddress.value.trim(),note=saleNote.value.trim(),whatsapp=normalizeWhatsApp(customerPhone);
+ if(!items.length||!date||!customerName||!payment||!delivery){alert("Preencha os dados do cliente e adicione pelo menos um produto. 💜");return}
+ if(!whatsapp){alert("Digite um número de WhatsApp válido com DDD. Ex.: (99) 99999-9999");return}
+ const qty=items.reduce((a,i)=>a+i.qty,0);
+ const stockQty=items.reduce((a,i)=>a+(itemConsumesBottle(i)?i.qty:0),0);
+ const oldSale=editingSaleId?data.sales.find(x=>x.id===editingSaleId):null;
+ const oldStockQty=oldSale?(oldSale.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0):0;
+ const availableForEdit=stock()+oldStockQty;
+ if(stockQty>availableForEdit){alert(`Estoque insuficiente. Você tem ${availableForEdit} garrafinha(s) disponível(is) para este pedido. 📦`);return}
+ const subtotal=items.reduce((a,i)=>a+i.total,0),deliveryFee=delivery==="Entrega"?DELIVERY_FEE:0,total=subtotal+deliveryFee,costTotal=items.reduce((a,i)=>a+i.cost*i.qty,0);
+ const sale=oldSale||{id:Date.now()};
+ Object.assign(sale,{date,items,qty,total,subtotal,deliveryFee,costTotal,customerName,customerPhone,payment,delivery,address,note});
+ if(!oldSale)data.sales.push(sale);
+ const existingClient=data.clients.find(c=>normalizeWhatsApp(c.phone)===whatsapp);
+ if(existingClient){existingClient.name=customerName;existingClient.phone=customerPhone;existingClient.address=address||existingClient.address||"";if(note)existingClient.note=note;}
+ else data.clients.push({id:"c"+Date.now(),name:customerName,phone:customerPhone,address,note});
+ const saleDescription=`Venda • ${customerName} • ${items.map(i=>i.name).join(", ")} • ${payment}`;
+ const cashEntry=data.cash.find(x=>x.saleId===sale.id&&x.kind!=="delivery");
+ if(cashEntry){cashEntry.date=date;cashEntry.value=total;cashEntry.description=saleDescription;cashEntry.kind="sale";}
+ else data.cash.push({id:Date.now()+1,date,type:"Entrada",value:total,description:saleDescription,saleId:sale.id,kind:"sale"});
+ // A taxa de entrega faz parte do faturamento e do caixa.
+ // Como o entregador é da família, não lançamos uma saída automática para a entrega.
+ data.cash=data.cash.filter(x=>!(x.saleId===sale.id&&x.kind==="delivery"));
+ save();
+ editingSaleId=null;
+ e.target.reset();document.getElementById("orderItems").innerHTML="";addOrderItem();saleDate.value=today();
+render();
+ const waUrl=`https://wa.me/${whatsapp}?text=${encodeURIComponent(whatsappMessage(s))}`;
+ window.location.assign(waUrl);
+}
+function customerNameEl(){return document.getElementById("customerName")}function customerPhoneEl(){return document.getElementById("customerPhone")}
+function fillCustomerFromName(){
+  const name=customerNameEl()?.value.trim().toLowerCase();
+  if(!name)return;
+  const c=data.clients.find(x=>String(x.name||"").trim().toLowerCase()===name);
+  if(c){
+    customerPhoneEl().value=c.phone||"";
+    customerAddress.value=c.address||"";
+    if(!saleNote.value && c.note)saleNote.value=c.note;
+    updateOrderTotal();
+  }
+}
+function sendSaleWhatsApp(id){const s=data.sales.find(x=>x.id===id);const w=normalizeWhatsApp(s?.customerPhone);if(!s||!w){alert("Esta venda não possui um WhatsApp válido.");return}window.location.assign(`https://wa.me/${w}?text=${encodeURIComponent(whatsappMessage(s))}`)}
+function editSale(id){
+ const s=data.sales.find(x=>x.id===id);if(!s)return;
+ editingSaleId=id;showTab("sell");
+ saleDate.value=s.date||today();customerNameEl().value=s.customerName||"";customerPhoneEl().value=s.customerPhone||"";
+ paymentMethod.value=s.payment||"";deliveryMethod.value=s.delivery||"";customerAddress.value=s.address||"";saleNote.value=s.note||"";
+ const wrap=document.getElementById("orderItems");wrap.innerHTML="";
+ (s.items||[]).forEach(i=>addOrderItem(i.productId,Number(i.qty)||1));
+ if(!s.items?.length)addOrderItem();
+ const btn=document.querySelector('#sell form button.primary');if(btn)btn.textContent="💜 Salvar alterações e enviar no WhatsApp";
+ const cancel=document.getElementById("cancelEditBtn");if(cancel)cancel.style.display="block";
+ window.scrollTo({top:0,behavior:"smooth"});
+}
+function cancelEditSale(){
+ editingSaleId=null;
+ const form=document.querySelector('#sell form');if(form)form.reset();
+ document.getElementById("orderItems").innerHTML="";addOrderItem();saleDate.value=today();
+ const btn=document.querySelector('#sell form button.primary');if(btn)btn.textContent="💜 Salvar venda e enviar no WhatsApp";
+ const cancel=document.getElementById("cancelEditBtn");if(cancel)cancel.style.display="none";
+ render();
+}
+
+function saveClient(e){
+ e.preventDefault();
+ const form=e.target,name=clientFormName.value.trim(),phone=clientFormPhone.value.trim(),address=clientFormAddress.value.trim(),note=clientFormNote.value.trim(),w=normalizeWhatsApp(phone);
+ if(!name||!w){alert("Informe nome e um WhatsApp válido com DDD. 💜");return}
+ const editingId=form.dataset.editingId;
+ const existing=editingId?data.clients.find(c=>c.id===editingId):data.clients.find(c=>normalizeWhatsApp(c.phone)===w);
+ if(existing){existing.name=name;existing.phone=phone;existing.address=address;existing.note=note;}
+ else data.clients.push({id:"c"+Date.now(),name,phone,address,note});
+ delete form.dataset.editingId;
+ const btn=form.querySelector('button.primary');if(btn)btn.textContent="👥 Cadastrar cliente";
+ save();form.reset();render();alert(existing?"Cliente atualizado! 💜":"Cliente cadastrado! 💜");
+}
+function editClient(id){
+ const c=data.clients.find(x=>x.id===id);if(!c)return;
+ showTab("clients");clientFormName.value=c.name||"";clientFormPhone.value=c.phone||"";clientFormAddress.value=c.address||"";clientFormNote.value=c.note||"";
+ const form=document.querySelector('#clients form');if(form)form.dataset.editingId=id;
+ const btn=form?.querySelector('button.primary');if(btn)btn.textContent="💜 Salvar alterações do cliente";
+}
+function deleteClient(id){
+ if(!confirm("Excluir este cliente do cadastro? As vendas antigas serão preservadas."))return;
+ data.clients=data.clients.filter(c=>c.id!==id);save();render();
+}
+function addCash(e){
+ e.preventDefault();
+ const type=cashType.value,value=Number(cashValue.value),description=cashDescription.value.trim();
+ if(!value){alert("Informe um valor válido.");return}
+ if(editingCashId){
+   const item=data.cash.find(x=>x.id===editingCashId);
+   if(!item)return;
+   item.type=type;item.value=value;item.description=description||"Movimentação";item.date=item.date||today();
+   editingCashId=null;
+   const btn=document.getElementById("cashSubmitBtn");if(btn)btn.textContent="💰 Registrar movimento";
+   const cancel=document.getElementById("cancelCashEditBtn");if(cancel)cancel.style.display="none";
+   save();e.target.reset();render();alert("Movimentação atualizada! 💜");return;
+ }
+ data.cash.push({id:Date.now(),date:today(),type,value,description:description||"Movimentação"});
+ save();e.target.reset();render();alert("Movimentação registrada! 💰");
+}
+function editCash(id){
+ const item=data.cash.find(x=>x.id===id);if(!item)return;
+ editingCashId=id;showTab("cash");
+ cashType.value=item.type;cashValue.value=item.value;cashDescription.value=item.description||"";
+ const btn=document.getElementById("cashSubmitBtn");if(btn)btn.textContent="💜 Salvar alteração";
+ const cancel=document.getElementById("cancelCashEditBtn");if(cancel)cancel.style.display="block";
+ window.scrollTo({top:0,behavior:"smooth"});
+}
+function cancelCashEdit(){
+ editingCashId=null;
+ const form=document.querySelector('#cash form');if(form)form.reset();
+ cashType.value="Entrada";
+ const btn=document.getElementById("cashSubmitBtn");if(btn)btn.textContent="💰 Registrar movimento";
+ const cancel=document.getElementById("cancelCashEditBtn");if(cancel)cancel.style.display="none";
+ render();
+}
+function deleteCash(id){
+ const item=data.cash.find(x=>x.id===id);if(!item)return;
+ if(item.kind==="sale"){alert("Essa entrada pertence a uma venda. Para alterá-la, edite a venda na aba Venda.");return}
+ if(["profit_withdrawal","profit_expense","profit_to_capital","working_capital_deposit"].includes(item.kind)){alert("Esse movimento é controlado pela área específica de lucro/capital de giro.");return}
+ if(!confirm(`Excluir esta movimentação de ${brl(item.value)}?`))return;
+ data.cash=data.cash.filter(x=>x.id!==id);save();render();alert("Movimentação excluída. 🗑️");
+}
+function separateProfit(e){
+ e.preventDefault();
+ const value=Number(profitValue.value),description=profitDescription.value.trim()||"Lucro separado";
+ if(!value||value<0){alert("Informe um valor válido.");return}
+ const d=selectedCashDate(),day=getCashDay(d);
+ if(!day?.opened||day.closed){alert(`Abra o caixa de ${dateBR(d)} antes de separar o lucro. 💚`);return}
+ const available=currentDayCashAvailable();
+ if(value>available){alert(`O valor informado (${brl(value)}) é maior que o saldo disponível para separar (${brl(available)}).`);return}
+ data.cash.push({id:Date.now(),date:d,type:"Saída",value,description,kind:"profit_withdrawal"});
+ save();e.target.reset();render();alert(`Lucro de ${brl(value)} separado do caixa de ${dateBR(d)}. 💚`);
+}
+function addProfitExpense(e){
+ e.preventDefault();
+ const value=Number(profitExpenseValue.value),description=profitExpenseDescription.value.trim()||"Saída do lucro";
+ if(!value||value<0){alert("Informe um valor válido.");return}
+ const available=calculateProfitAvailable();
+ if(value>available){alert(`O valor informado (${brl(value)}) é maior que o lucro disponível (${brl(available)}).`);return}
+ data.cash.push({id:Date.now(),date:today(),type:"Saída",value,description,kind:"profit_expense"});
+ save();e.target.reset();render();alert(`Saída de ${brl(value)} registrada no lucro. 💳`);
+}
+function calculateProfitAvailable(){
+ const currentMonth=monthKey(today());
+ // Available profit belongs to the current cycle only. August profit is historical
+ // and must not appear in September's available-profit balance.
+ const currentCash=data.cash.filter(x=>!x.v30Historical && monthKey(x.date)===currentMonth);
+ const separated=currentCash.filter(x=>x.kind==="profit_withdrawal").reduce((a,x)=>a+Number(x.value||0),0);
+ const spent=currentCash.filter(x=>x.kind==="profit_expense"||x.kind==="profit_to_capital").reduce((a,x)=>a+Number(x.value||0),0);
+ return Math.max(0,separated-spent);
+}
+function calculateOperationalCash(){
+ const cin=data.cash.filter(x=>x.type==="Entrada").reduce((a,x)=>a+x.value,0);
+ const cout=data.cash.filter(x=>x.type==="Saída" && x.kind!=="profit_withdrawal" && x.kind!=="profit_expense" && x.kind!=="profit_to_capital").reduce((a,x)=>a+x.value,0);
+ const separated=data.cash.filter(x=>x.kind==="profit_withdrawal").reduce((a,x)=>a+x.value,0);
+ return Math.max(0,cin-cout-separated);
+}
+function addWorkingCapitalMovement(value,description,kind){
+  const amount=Number(value||0); if(!amount||amount<0)return;
+  data.settings.workingCapitalBalance=Math.max(0,Number(data.settings.workingCapitalBalance||0)+amount*(kind==="withdraw"?-1:1));
+  data.workingCapitalMovements.push({id:Date.now()+Math.random(),date:today(),value:amount,kind,description:description||"Movimento do capital de giro"});
+}
+function moveWorkingCapital(e){
+  e.preventDefault();
+  const type=document.getElementById("workingCapitalType").value;
+  const value=Number(document.getElementById("workingCapitalValue").value);
+  const description=document.getElementById("workingCapitalDescription").value.trim();
+  if(!value||value<0){alert("Informe um valor válido.");return}
+  const goal=Number(data.settings.workingCapitalGoal||0),balance=workingCapital();
+  if(type==="withdraw"){
+    if(value>balance){alert(`Você só tem ${brl(balance)} no capital de giro.`);return}
+    addWorkingCapitalMovement(value,description,"withdraw");
+    save();e.target.reset();render();alert(`Uso de ${brl(value)} do capital de giro registrado. 🏦`);return;
+  }
+  if(goal>0 && balance+value>goal){
+    const extra=balance+value-goal;
+    if(!confirm(`Esse movimento deixará o capital de giro ${brl(extra)} acima da meta de ${brl(goal)}. Deseja continuar?`))return;
+  }
+  if(type==="replenish_cash"){
+    const available=currentDayCashAvailable();
+    if(value>available){alert(`O caixa atual tem apenas ${brl(available)} disponíveis para essa reposição.`);return}
+    const d=selectedCashDate();
+    if(!getCashDay(d)?.opened){alert("Abra o caixa do dia antes de retirar dinheiro dele para o capital de giro.");return}
+    data.cash.push({id:Date.now(),date:d,type:"Saída",value,description:description||"Reposição do capital de giro",kind:"working_capital_deposit"});
+    addWorkingCapitalMovement(value,description||"Reposição do capital de giro","replenish_cash");
+  }else{
+    const available=calculateProfitAvailable();
+    if(value>available){alert(`O lucro separado disponível é ${brl(available)}.`);return}
+    data.cash.push({id:Date.now(),date:today(),type:"Saída",value,description:description||"Reposição do capital de giro com lucro",kind:"profit_to_capital"});
+    addWorkingCapitalMovement(value,description||"Reposição do capital de giro com lucro","replenish_profit");
+  }
+  save();e.target.reset();render();alert(`Capital de giro atualizado em ${brl(value)}. 🏦`);
+}
+function addStockWithdrawal(e){
+  e.preventDefault();
+  const qty=Number(withdrawalQty.value),note=withdrawalNote.value.trim()||"Consumo próprio";
+  if(!qty||qty<1){alert("Informe uma quantidade válida.");return}
+  if(editingStockWithdrawalId){
+    const item=data.stockWithdrawals.find(x=>x.id===editingStockWithdrawalId);
+    if(!item)return;
+    const oldQty=Number(item.qty||0);
+    const availableWithoutOld=stock()+oldQty;
+    if(qty>availableWithoutOld){alert(`Você tem apenas ${availableWithoutOld} garrafinha(s) disponível(is) para corrigir esta retirada.`);return}
+    item.qty=qty; item.note=note;
+    editingStockWithdrawalId=null;
+    const btn=e.target.querySelector("button");if(btn)btn.textContent="🥤 Registrar retirada";
+    save();e.target.reset();render();alert("Retirada atualizada! 📦");return;
+  }
+  const available=stock();
+  if(qty>available){alert(`Você tem apenas ${available} garrafinha(s) disponível(is) no estoque.`);return}
+  data.stockWithdrawals.push({id:Date.now(),date:today(),qty,note});
+  save();e.target.reset();render();alert(`${qty} garrafinha(s) retirada(s) do estoque. 🥤`);
+}
+function editStockWithdrawal(id){
+  const item=data.stockWithdrawals.find(x=>x.id===id);if(!item)return;
+  editingStockWithdrawalId=id;showTab("production");
+  withdrawalQty.value=item.qty;withdrawalNote.value=item.note||"";
+  const btn=document.querySelector('#production form[onsubmit="addStockWithdrawal(event)"] button');
+  if(btn)btn.textContent="💾 Salvar alteração";
+}
+function deleteStockWithdrawal(id){
+  const item=data.stockWithdrawals.find(x=>x.id===id);if(!item)return;
+  if(!confirm(`Excluir a retirada de ${item.qty} garrafinha(s)? O estoque será recalculado automaticamente.`))return;
+  data.stockWithdrawals=data.stockWithdrawals.filter(x=>x.id!==id);save();render();alert("Retirada excluída. 📦");
+}
+function saveProduction(e){
+  e.preventDefault();
+  const qty=Number(productionQty.value),note=productionNote.value.trim();
+  if(!qty||qty<1){alert("Informe uma quantidade válida.");return}
+  if(editingProductionId){
+    const item=data.production.find(x=>x.id===editingProductionId);if(!item)return;
+    item.qty=qty;item.note=note;
+    editingProductionId=null;e.target.reset();
+    const btn=e.target.querySelector("button.primary");if(btn)btn.textContent="📦 Salvar produção";
+    save();render();alert("Produção atualizada! 📦");return;
+  }
+  data.production.push({id:Date.now(),date:today(),qty,note});
+  save();e.target.reset();render();alert("Produção salva e adicionada ao estoque! 📦");
+}
+function editProduction(id){
+  const item=data.production.find(x=>x.id===id);if(!item)return;
+  editingProductionId=id;showTab("production");
+  productionQty.value=item.qty;productionNote.value=item.note||"";
+  const btn=document.querySelector('#production form[onsubmit="saveProduction(event)"] button.primary');
+  if(btn)btn.textContent="💾 Salvar alteração";
+}
+function deleteProduction(id){
+  const item=data.production.find(x=>x.id===id);if(!item)return;
+  if(!confirm(`Excluir a produção de ${item.qty} garrafinha(s)? O estoque será recalculado automaticamente.`))return;
+  data.production=data.production.filter(x=>x.id!==id);save();render();alert("Produção excluída. 📦");
+}
+function saveSettings(e){e.preventDefault();data.settings.price=Number(settingPrice.value)||0;data.settings.cost=Number(settingCost.value)||10;data.settings.goal=Number(settingGoal.value)||0;data.settings.initialStock=Math.max(0,Number(settingInitialStock.value)||0);data.settings.lowStock=Math.max(0,Number(settingLowStock.value)||0);data.settings.workingCapitalGoal=Math.max(0,Number(settingWorkingCapitalGoal.value)||0);data.settings.workingCapitalBalance=Math.max(0,Number(data.settings.workingCapitalBalance)||0);save();render();alert("Configurações salvas! ⚙️")}
+function saveProduct(e){e.preventDefault();const name=productName.value.trim(),price=Number(productPrice.value),cost=Number(productCost.value),category=productCategory.value.trim()||"Açaí",stockItem=productStockItem.value==="bottle";if(!name||price<0||cost<0)return;if(editingProductId){const p=productById(editingProductId);if(!p)return;p.name=name;p.price=price;p.cost=cost;p.category=category;p.stockItem=stockItem;alert("Produto atualizado! 🛍️")}else{data.products.push({id:"p"+Date.now(),name,price,cost,category,stockItem,active:true});alert("Produto cadastrado! 🛍️")}save();cancelProductEdit();render()}
+function editProduct(id){const p=productById(id);if(!p)return;editingProductId=id;productName.value=p.name;productPrice.value=p.price;productCost.value=p.cost;productCategory.value=p.category||"Açaí";productStockItem.value=productConsumesBottle(p)?"bottle":"additional";productSubmitBtn.textContent="💾 Salvar alterações";cancelProductEditBtn.style.display="block";showTab("products");setTimeout(()=>document.getElementById("productName")?.scrollIntoView({behavior:"smooth",block:"center"}),50)}
+function cancelProductEdit(){editingProductId=null;const f=document.querySelector('#products form');if(f)f.reset();const btn=document.getElementById("productSubmitBtn");const cancel=document.getElementById("cancelProductEditBtn");if(btn)btn.textContent="➕ Cadastrar produto";if(cancel)cancel.style.display="none"}
+function toggleProduct(id){const p=productById(id);if(!p)return;p.active=p.active===false;save();render()}
+function removeProduct(id){if(!confirm("Remover este produto do cadastro? As vendas antigas serão preservadas."))return;data.products=data.products.filter(p=>p.id!==id);save();render()}
+function clearSales(){if(!confirm("Apagar todas as vendas e as entradas automáticas de venda do Caixa?"))return;const ids=new Set(data.sales.map(x=>x.id));data.sales=[];data.cash=data.cash.filter(x=>!ids.has(x.saleId));save();render()}
+function startNewMonth(){
+  if(data.settings?.v32SeptemberStarted){alert("O controle de setembro já está ativo. 💜");return}
+  if(!confirm("Iniciar o controle de setembro agora? As vendas e o caixa de hoje serão movidos para 01/09 e os próximos lançamentos ficarão em setembro. Nenhum valor será alterado."))return;
+  const from=realToday(),target="2026-09-01";
+  (data.sales||[]).forEach(s=>{if(s.date===from)s.date=target;});
+  (data.cash||[]).forEach(x=>{if(x.date===from)x.date=target;});
+  (data.production||[]).forEach(x=>{if(x.date===from)x.date=target;});
+  (data.stockWithdrawals||[]).forEach(x=>{if(x.date===from)x.date=target;});
+  (data.profitAdjustments||[]).forEach(x=>{if(x.date===from)x.date=target;});
+  (data.workingCapitalMovements||[]).forEach(x=>{if(x.date===from)x.date=target;});
+  if(data.cashDays?.[from]){data.cashDays[target]=data.cashDays[from];delete data.cashDays[from];}
+  data.settings.businessDate=target;data.settings.v32SeptemberStarted=true;
+  repairSaleCashEntries();save();render();
+  alert("Controle de setembro iniciado! 💜\n\nA partir de agora, os novos registros serão lançados em setembro.");
+}
+function reportMonths(){const set=new Set([today().slice(0,7)]);data.sales.forEach(x=>{const m=monthKey(x.date);if(/^\d{4}-\d{2}$/.test(m))set.add(m)});return [...set].sort().reverse()}
+function monthLabel(m){if(m==="all")return "Todo o período";const [y,mo]=m.split("-").map(Number);return new Date(y,mo-1,1).toLocaleDateString("pt-BR",{month:"long",year:"numeric"}).replace(/^./,c=>c.toUpperCase())}
+function selectedReportMonth(){const el=document.getElementById("reportMonth");return el?.value||today().slice(0,7)}
+function filteredSales(){const m=selectedReportMonth();return m==="all"?data.sales.slice():data.sales.filter(x=>monthKey(x.date)===m)}
+function exportBackup(){const blob=new Blob([JSON.stringify({version:32,exportedAt:new Date().toISOString(),data},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="roxo-mania-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function importBackup(e){const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const obj=JSON.parse(r.result);if(!obj.data||!Array.isArray(obj.data.sales)||!Array.isArray(obj.data.production)||!Array.isArray(obj.data.cash))throw Error();data=normalizeData(obj.data);save();render();alert("Backup importado com sucesso! 💜")}catch(err){alert("Não foi possível importar esse backup.")}e.target.value=""};r.readAsText(f)}
+function monthKey(d){return String(d||"").slice(0,7)}
+function salesProfit(list){return list.reduce((a,s)=>a+Number(s.subtotal??s.total??0)-Number(s.costTotal||s.items?.reduce((z,i)=>z+i.cost*i.qty,0)||0),0)}
+function businessRevenue(list){return list.reduce((a,s)=>a+Number(s.total??s.subtotal??0),0)}
+function repairSaleCashEntries(){
+  let changed=false;
+  for(const s of data.sales){
+    // Do not manufacture a cash entry for an old sale before the new cash cycle is opened.
+    // A sale only enters the cash when it is actually recorded in the current open cycle.
+    const currentCycle=s.date===today(), currentDay=getCashDay(s.date);
+    if(currentCycle && !currentDay?.opened) continue;
+    const expected=Number(s.subtotal??(Number(s.total||0)-Number(s.deliveryFee||0)));
+    const total=Number(s.total??(expected+Number(s.deliveryFee||0)));
+    let entry=data.cash.find(x=>x.saleId===s.id&&x.kind!=="delivery");
+    if(entry){if(Math.abs(Number(entry.value||0)-total)>0.001){entry.value=total;changed=true;}if(entry.date!==s.date){entry.date=s.date;changed=true;}if(entry.kind!=="sale"){entry.kind="sale";changed=true;}}
+    else{data.cash.push({id:Date.now()+Math.random(),date:s.date,type:"Entrada",value:total,description:`Venda • ${s.customerName||"Cliente"}`,saleId:s.id,kind:"sale"});changed=true;}
+    // Taxa de entrega pertence ao faturamento/caixa e não gera saída automática.
+    const oldDelivery=data.cash.filter(x=>x.saleId===s.id&&x.kind==="delivery");
+    if(oldDelivery.length){data.cash=data.cash.filter(x=>!(x.saleId===s.id&&x.kind==="delivery"));changed=true;}
+  }
+  if(changed)save();
+}
+function getCashDay(date=today()){return data.cashDays[date]||null}
+function cashDayTotals(date=today()){const list=data.cash.filter(x=>x.date===date&&!x.v46HistoricalCash);return {in:list.filter(x=>x.type==="Entrada").reduce((a,x)=>a+Number(x.value||0),0),out:list.filter(x=>x.type==="Saída"&&x.kind!=="profit_expense"&&x.kind!=="profit_to_capital").reduce((a,x)=>a+Number(x.value||0),0)}}
+function getPreviousClosedCashDay(date=today()){
+ const keys=Object.keys(data.cashDays).filter(k=>k<date && data.cashDays[k]?.opened&&data.cashDays[k]?.closed).sort();
+ if(!keys.length)return null;
+ return data.cashDays[keys[keys.length-1]];
+}
+function openCash(){
+ const d=today(),existing=getCashDay(d);
+ if(existing?.opened){alert("O caixa de hoje já está aberto. 💜");return}
+ const previous=getPreviousClosedCashDay(d);
+ const suggested=previous?Number(previous.counted??previous.expected??0):0;
+ const hint=previous?`O fechamento anterior foi de ${brl(suggested)}. Esse valor será a abertura de hoje.`:"Este é o primeiro caixa registrado. Informe o valor inicial.";
+ const raw=prompt(`${hint}\n\nCom quanto você está abrindo o caixa hoje?`,Number(suggested).toFixed(2));
+ if(raw===null)return;
+ const opening=moneyInput(raw);
+ if(!Number.isFinite(opening)||opening<0){alert("Informe um valor válido. Digite apenas o número, por exemplo: 50 ou 50,00.");return}
+ data.cashDays[d]={opened:true,opening,openedAt:new Date().toISOString(),closed:false,openingFromPrevious:!!previous};
+ cashViewDate=d;
+ save();render();alert(`Caixa aberto com ${brl(opening)}. 💜`);
+}
+
+function editOpeningCash(){
+ const d=today(),day=data.cashDays[d];
+ if(!day||!day.opened){alert("Abra o caixa primeiro.");return}
+ const raw=prompt("Informe o novo saldo inicial do caixa:",Number(day.opening||0).toFixed(2));
+ if(raw===null)return;
+ const opening=moneyInput(raw);
+ if(!Number.isFinite(opening)||opening<0){alert("Informe um valor válido. Digite apenas o número, por exemplo: 50 ou 50,00.");return}
+ day.opening=opening;
+ if(day.closed){
+   const totals=cashDayTotals(d),daySales=data.sales.filter(x=>x.date===d),profitToSeparate=data.cash.filter(x=>x.date===d&&x.kind==="profit_withdrawal").reduce((a,x)=>a+x.value,0);
+   day.expected=opening+totals.in-totals.out;
+   day.expected=Math.max(0,day.expected);
+   day.difference=Number(day.counted||0)-day.expected;
+ }
+ save();render();alert("Saldo inicial atualizado! 💜");
+}
+
+function closeCash(){
+  const d=today(),day=getCashDay(d);
+  if(!day?.opened){alert("Abra o caixa antes de fechá-lo. 💜");return}
+  if(day.closed){alert("O caixa de hoje já está fechado.");return}
+  const totals=cashDayTotals(d),expected=Number(day.opening||0)+totals.in-totals.out;
+  const raw=prompt(`Saldo esperado no fechamento (já considerando o lucro que você separou): ${brl(expected)}\n\nConte o dinheiro que ficou no caixa e informe quanto encontrou:`,Number(expected).toFixed(2));
+  if(raw===null)return;
+  const counted=Number(String(raw).replace(/\./g,"").replace(",","."));
+  if(!Number.isFinite(counted)||counted<0){alert("Informe um valor válido.");return}
+  const diff=counted-expected;
+  day.closed=true;day.closedAt=new Date().toISOString();day.expected=expected;day.counted=counted;day.difference=diff;save();render();
+  alert(`Caixa fechado!\n\nEsperado: ${brl(expected)}\nContado: ${brl(counted)}\nDiferença: ${brl(diff)}`);
+}
+
+
+function selectedCashDate(){return cashViewDate||today();}
+function enterHistoricalCash(date){
+  if(!data.cashDays[date]){alert("Esse caixa não está registrado.");return}
+  cashViewDate=date;
+  showTab("cash");
+  window.scrollTo({top:0,behavior:"smooth"});
+  render();
+}
+function leaveHistoricalCash(){cashViewDate=null;render();}
+
+function currentDayCashAvailable(){
+ const d=selectedCashDate(),day=getCashDay(d);
+ if(!day?.opened)return 0;
+ const list=data.cash.filter(x=>x.date===d&&!x.v46HistoricalCash);
+ const cin=list.filter(x=>x.type==="Entrada").reduce((a,x)=>a+Number(x.value||0),0);
+ const cout=list.filter(x=>x.type==="Saída" && x.kind!=="profit_withdrawal" && x.kind!=="profit_expense" && x.kind!=="profit_to_capital").reduce((a,x)=>a+Number(x.value||0),0);
+ const sep=list.filter(x=>x.kind==="profit_withdrawal").reduce((a,x)=>a+Number(x.value||0),0);
+ return Math.max(0,Number(day.opening||0)+cin-cout-sep);
+}
+function currentCashBalance(){return currentDayCashAvailable()}
+function workingCapital(){return Math.max(0,Number(data.settings.workingCapitalBalance)||0)}
+
+function closeHistoricalCash(date){
+  const day=data.cashDays[date];
+  if(!day?.opened){alert("Esse caixa não foi aberto. 💜");return}
+  if(day.closed){alert("Esse caixa já está fechado. Se precisar corrigir, use Editar ou Reabrir.");return}
+  const totals=cashDayTotals(date),expected=Number(day.opening||0)+totals.in-totals.out;
+  const raw=prompt(`Fechamento do caixa de ${dateBR(date)}\n\nSaldo esperado: ${brl(expected)}\n\nConte o dinheiro que ficou no caixa e informe quanto encontrou:`,Number(expected).toFixed(2));
+  if(raw===null)return;
+  const counted=moneyInput(raw);
+  if(!Number.isFinite(counted)||counted<0){alert("Informe um valor válido. Digite apenas o número, por exemplo: 50 ou 50,00.");return}
+  const diff=counted-expected;
+  day.closed=true;day.closedAt=new Date().toISOString();day.expected=expected;day.counted=counted;day.difference=diff;
+  save();render();
+  alert(`Caixa de ${dateBR(date)} fechado!\n\nEsperado: ${brl(expected)}\nContado: ${brl(counted)}\nDiferença: ${brl(diff)}`);
+}
+function reopenCashDay(date){
+  const day=data.cashDays[date];
+  if(!day?.opened){alert("Esse caixa não está registrado como aberto.");return}
+  if(!day.closed){alert("Esse caixa já está aberto e pode ser fechado agora.");return}
+  if(!confirm(`Reabrir o caixa de ${dateBR(date)} para fazer o fechamento novamente?`))return;
+  day.closed=false;
+  delete day.closedAt; delete day.expected; delete day.counted; delete day.difference;
+  day.reopenedAt=new Date().toISOString();
+  save();render();alert(`Caixa de ${dateBR(date)} reaberto. Agora você pode fechá-lo novamente. 💜`);
+}
+
+function editCashDay(date){
+  const day=data.cashDays[date];
+  if(!day)return;
+  const openingRaw=prompt("Valor de abertura deste caixa:", Number(day.opening||0).toFixed(2));
+  if(openingRaw===null)return;
+  const opening=moneyInput(openingRaw);
+  if(!Number.isFinite(opening)||opening<0){alert("Informe um valor válido.");return}
+  const countedRaw=prompt("Valor encontrado no fechamento deste caixa:", Number(day.counted ?? day.expected ?? 0).toFixed(2));
+  if(countedRaw===null)return;
+  const counted=moneyInput(countedRaw);
+  if(!Number.isFinite(counted)||counted<0){alert("Informe um valor válido.");return}
+  const totals=cashDayTotals(date);
+  const expected=opening+totals.in-totals.out;
+  day.opening=opening;
+  day.expected=Math.max(0,expected);
+  day.counted=counted;
+  day.difference=counted-day.expected;
+  day.editedAt=new Date().toISOString();
+  save();render();alert("Caixa anterior atualizado! 💜");
+}
+function deleteCashDay(date){
+  const day=data.cashDays[date];
+  if(!day)return;
+  if(!confirm(`Apagar o fechamento do caixa de ${dateBR(date)}? As vendas e movimentações continuam registradas.`))return;
+  delete data.cashDays[date];
+  save();render();alert("Caixa anterior apagado.");
+}
+
+
+function getProfitAdjustment(date){
+  const item=(data.profitAdjustments||[]).find(x=>x.date===date);
+  return item?Number(item.amount||0):0;
+}
+function profitForDateDetailed(date){
+  const sales=(data.sales||[]).filter(s=>s.date===date);
+  const revenue=sales.reduce((a,s)=>a+Number(s.subtotal??s.total??0),0);
+  const costs=sales.reduce((a,s)=>a+Number(s.costTotal||s.items?.reduce((z,i)=>z+Number(i.cost||0)*Number(i.qty||0),0)||0),0);
+  const adjustment=getProfitAdjustment(date);
+  return {date,revenue,costs,calculated:revenue-costs,adjustment,final:revenue-costs+adjustment,sales:sales.length};
+}
+function profitDatesForMonth(month){
+  const dates=new Set();
+  (data.sales||[]).forEach(s=>{if(String(s.date||"").startsWith(month))dates.add(s.date)});
+  (data.profitAdjustments||[]).forEach(a=>{if(String(a.date||"").startsWith(month))dates.add(a.date)});
+  return [...dates].sort();
+}
+function editProfitDay(date){
+  data.profitAdjustments=data.profitAdjustments||[];
+  const current=getProfitAdjustment(date);
+  const raw=prompt("Ajuste manual do lucro de "+dateBR(date)+".\nUse positivo para acrescentar ou negativo para reduzir:",Number(current).toFixed(2));
+  if(raw===null)return;
+  const amount=moneyInput(raw);
+  if(!Number.isFinite(amount)){alert("Digite um valor válido, como 20 ou -20.");return}
+  const i=data.profitAdjustments.findIndex(x=>x.date===date);
+  if(Math.abs(amount)<0.000001){if(i>=0)data.profitAdjustments.splice(i,1)}
+  else if(i>=0)data.profitAdjustments[i].amount=amount;
+  else data.profitAdjustments.push({id:Date.now(),date,amount});
+  save();render();renderProfitDashboard();
+}
+function deleteProfitAdjustment(date){
+  const i=(data.profitAdjustments||[]).findIndex(x=>x.date===date);
+  if(i<0)return;
+  if(!confirm("Apagar o ajuste manual deste dia? O lucro calculado pelas vendas será mantido."))return;
+  data.profitAdjustments.splice(i,1);save();render();renderProfitDashboard();
+}
+function viewProfitDay(date){
+  const r=profitForDateDetailed(date);
+  alert("Resumo de "+dateBR(date)+"\n\nFaturamento sem entrega: "+brl(r.revenue)+"\nCustos: "+brl(r.costs)+"\nLucro calculado: "+brl(r.calculated)+"\nAjuste manual: "+brl(r.adjustment)+"\nLucro final: "+brl(r.final)+"\nVendas: "+r.sales);
+}
+function renderProfitDashboard(){
+  const monthEl=document.getElementById("profitMonth");
+  const totalEl=document.getElementById("profitMonthTotal");
+  const listEl=document.getElementById("profitDaysList");
+  if(!monthEl||!totalEl||!listEl)return;
+  const month=monthEl.value||today().slice(0,7);
+  monthEl.value=month;
+  const rows=profitDatesForMonth(month).map(profitForDateDetailed);
+  const calculated=rows.reduce((a,r)=>a+r.calculated,0);
+  const adjustments=rows.reduce((a,r)=>a+r.adjustment,0);
+  const final=rows.reduce((a,r)=>a+r.final,0);
+  totalEl.innerHTML="<strong style='font-size:22px'>Lucro final do mês: "+brl(final)+"</strong><div class='mini'>Calculado pelas vendas: "+brl(calculated)+" • Ajustes manuais: "+brl(adjustments)+"</div>";
+  listEl.innerHTML=rows.length?rows.map(r=>`<div class="item" style="margin-top:10px">
+    <div><strong>${dateBR(r.date)}</strong><small>Calculado: ${brl(r.calculated)}${Math.abs(r.adjustment)>0.000001?" • Ajuste: "+brl(r.adjustment):""}</small></div>
+    <div class="actions"><strong>${brl(r.final)}</strong><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="viewProfitDay('${r.date}')">🔎 Ver dia</button><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editProfitDay('${r.date}')">✏️ Editar</button>${Math.abs(r.adjustment)>0.000001?`<button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteProfitAdjustment('${r.date}')">🗑️ Apagar ajuste</button>`:""}</div>
+  </div>`).join(""):"<div class='empty'>Nenhum lucro registrado neste mês.</div>";
+}
+
+function renderMonthlyHistory(){
+ const el=document.getElementById("monthlyHistory"); if(!el)return;
+ const months=reportMonths();
+ el.innerHTML=months.map(m=>{const rows=data.sales.filter(x=>monthKey(x.date)===m);const rev=businessRevenue(rows),qty=(data.settings?.v32SeptemberResetApplied && m===today().slice(0,7)?
+  rows.filter(x=>!x.v30Historical).reduce((a,s)=>a+(s.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0)
+  :data.settings?.v30HistoricalStockBaselineSet?
+  Number(data.settings.v30HistoricalSalesUnits||0)+rows.filter(x=>!x.v30Historical&&x.items).reduce((a,s)=>a+(s.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0)
+  :rows.reduce((a,x)=>a+(x.items||[]).reduce((z,i)=>z+Number(i.qty||0),0),0)),profit=salesProfit(rows);return `<div class="item"><div><strong>${esc(monthLabel(m))}</strong><small>${rows.length} pedido(s) • ${qty} garrafinha(s) • Faturamento ${brl(rev)}</small></div><div class="actions"><span class="badge green">${brl(profit)} lucro</span><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="selectReportMonth('${m}')">👁️ Ver mês</button></div></div>`}).join("")||`<div class="empty">Nenhum mês com vendas registradas.</div>`;
+}
+function selectReportMonth(m){const el=document.getElementById("reportMonth");if(el){el.value=m;render();showTab("reports")}}
+function renderReportMonthOptions(){const el=document.getElementById("reportMonth");if(!el)return;const current=el.value||today().slice(0,7);el.innerHTML=reportMonths().map(m=>`<option value="${m}">${esc(monthLabel(m))}</option>`).join("")+`<option value="all">Todo o período</option>`;el.value=reportMonths().includes(current)?current:today().slice(0,7)}
+
+function render(){
+
+const cashDaysHTML=Object.entries(data.cashDays||{}).sort(([a],[b])=>b.localeCompare(a)).map(([date,day])=>`<div class="item"><div><strong>💰 Caixa — ${dateBR(date)}</strong><small>Abertura: ${brl(day.opening||0)} • ${day.closed?`Fechamento: ${brl(day.counted||0)} • Esperado: ${brl(day.expected||0)} • Diferença: ${brl(day.difference||0)}`:"Ainda aberto"}</small></div><div class="actions"><span class="badge purple">${day.closed?"Fechado":"Aberto"}</span>${day.closed?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="reopenCashDay('${date}')">🔓 Reabrir</button>`:`<button class="primary" style="padding:6px 8px;font-size:11px" onclick="closeHistoricalCash('${date}')">🔒 Fechar agora</button>`}<button class="primary" style="padding:6px 8px;font-size:11px" onclick="enterHistoricalCash('${date}')">👁️ Entrar</button><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editCashDay('${date}')">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteCashDay('${date}')">🗑️ Apagar</button></div></div>`).join("");
+const editableCashHistory=document.getElementById("editableCashHistory");
+if(editableCashHistory) editableCashHistory.innerHTML=cashDaysHTML || '<div class="empty">Nenhum caixa anterior registrado.</div>';
+
+ const t=today(),ts=data.sales.filter(x=>x.date===t),revenue=businessRevenue(ts),qty=ts.reduce((a,x)=>a+x.qty,0),prod=data.production.filter(x=>x.date===t).reduce((a,x)=>a+x.qty,0),goal=Number(data.settings.goal)||0,pct=goal?Math.min(100,Math.round(revenue/goal*100)):0;
+ const thisMonth=monthKey(t),ms=data.sales.filter(x=>monthKey(x.date)===thisMonth),monthRev=businessRevenue(ms),todayProfitValue=salesProfit(ts),monthProfitValue=salesProfit(ms),wc=workingCapital(),wcGoal=Number(data.settings.workingCapitalGoal)||0;
+ todayText.textContent=new Date(today()+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"});todayRevenue.textContent=brl(revenue);todayQty.textContent=qty;goalValue.textContent=brl(goal);productionValue.textContent=prod;const tp=document.getElementById("todayProfit");if(tp)tp.textContent=brl(todayProfitValue);const mp=document.getElementById("monthProfit");if(mp)mp.textContent=brl(monthProfitValue);const mps=document.getElementById("monthProfitSales");if(mps)mps.textContent=brl(monthProfitValue);workingCapital.textContent=brl(wc);goalPercent.textContent=pct+"%";goalBar.style.width=pct+"%";
+ const st=stock();stockValue.textContent=st;productionStock.textContent=st;stockBadge.textContent=st<=0?"sem estoque":st<=Number(data.settings.lowStock||0)?"estoque baixo":"disponíveis";stockBadge.className="badge "+stockClass(st);stockNotice.textContent=st<=0?"⚠️ Estoque zerado. Registre uma produção antes de vender.":st<=Number(data.settings.lowStock||0)?`⚠️ Estoque baixo: restam ${st} garrafinha(s).`:"💜 Estoque calculado automaticamente: produção + estoque inicial − vendas.";saleStockInfo.textContent=`Estoque disponível agora: ${st} garrafinha(s)`;const defaultPriceNotice=document.getElementById("defaultPriceNotice");if(defaultPriceNotice)defaultPriceNotice.textContent=brl(data.settings.price);
+ renderReportMonthOptions();
+ const fs=filteredSales(),fr=businessRevenue(fs),fq=(data.settings?.v32SeptemberResetApplied && selectedReportMonth()===today().slice(0,7)?
+  fs.filter(x=>!x.v30Historical).reduce((a,s)=>a+(s.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0)
+  :data.settings?.v30HistoricalStockBaselineSet && selectedReportMonth()!==today().slice(0,7)?
+  Number(data.settings.v30HistoricalSalesUnits||0)+fs.filter(x=>!x.v30Historical&&x.items).reduce((a,s)=>a+(s.items||[]).reduce((z,i)=>z+(itemConsumesBottle(i)?Number(i.qty||0):0),0),0)
+  :fs.reduce((a,x)=>a+(x.items||[]).reduce((z,i)=>z+Number(i.qty||0),0),0)),fp=salesProfit(fs),fticket=fs.length?fr/fs.length:0,fcustomers=new Set(fs.map(x=>x.customerName?.toLowerCase()).filter(Boolean)).size;
+ allRevenue.textContent=brl(fr);allQty.textContent=fq;avgTicket.textContent=brl(fticket);customerCount.textContent=fcustomers;
+ reportSummary.innerHTML=`<strong>${esc(monthLabel(selectedReportMonth()))}</strong> • <strong>${fs.length}</strong> pedido(s) • <strong>${fq}</strong> garrafinha(s) • <strong>${brl(fr)}</strong> faturados • <strong>${brl(fp)}</strong> de lucro estimado`;
+ renderMonthlyHistory();const pmh=document.getElementById("profitMonthlyHistory");if(pmh){const months=[...new Set(data.sales.map(x=>monthKey(x.date)))].sort().reverse();pmh.innerHTML=months.map(m=>{const rows=data.sales.filter(x=>monthKey(x.date)===m);return `<div class="item"><div><strong>${esc(monthLabel(m))}</strong><small>${rows.length} pedido(s)</small></div><span class="badge green">${brl(salesProfit(rows))} lucro</span></div>`}).join("")||`<div class="empty">Nenhum lucro registrado ainda.</div>`;}
+ const saleHTML=data.sales.slice().reverse().slice(0,50).map(x=>{const names=(x.items||[]).map(i=>`${i.qty}x ${esc(i.name)}`).join(" • ");return `<div class="item"><div><strong>${esc(x.customerName||"")}</strong><small>${names}<br>${dateBR(x.date)} • ${x.payment?esc(x.payment):""}${x.delivery?.startsWith("Entrega")?` • ${esc(x.delivery)}${Number(x.deliveryFee||0)>0?" + "+brl(x.deliveryFee):""}`:""}</small></div><div style="text-align:right"><span class="badge green">${brl(x.total)}</span><div class="actions" style="margin-top:6px;justify-content:flex-end"><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editSale(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteSale(${x.id})">🗑️ Apagar</button>${x.customerPhone?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="sendSaleWhatsApp(${x.id})">📲 WhatsApp</button>`:""}</div></div></div>`}).join("");salesList.innerHTML=saleHTML||`<div class="empty">Nenhum pedido registrado ainda. 💜</div>`;
+  const todayHTML=data.sales.filter(x=>x.date===t).slice().reverse().map(x=>{const names=(x.items||[]).map(i=>`${i.qty}x ${esc(i.name)}`).join(" • ");return `<div class="item"><div><strong>${esc(x.customerName||"")}</strong><small>${names}<br>${dateBR(x.date)} • ${x.payment?esc(x.payment):""}${x.delivery?.startsWith("Entrega")?` • ${esc(x.delivery)}${Number(x.deliveryFee||0)>0?" + "+brl(x.deliveryFee):""}`:""}</small></div><div style="text-align:right"><span class="badge green">${brl(x.total)}</span><div class="actions" style="margin-top:6px;justify-content:flex-end"><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editSale(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteSale(${x.id})">🗑️ Apagar</button>${x.customerPhone?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="sendSaleWhatsApp(${x.id})">📲 WhatsApp</button>`:""}</div></div></div>`}).join("");
+  todaySalesList.innerHTML=todayHTML||`<div class="empty">Nenhuma venda hoje. 💜</div>`;
+  allSalesList.innerHTML=saleHTML||`<div class="empty">Nenhum pedido registrado ainda.</div>`;
+ productionTotal.textContent=totalProduced();productionToday.textContent=prod;
+ const productionHTML=data.production.slice().reverse().slice(0,50).map(x=>`<div class="item"><div><strong>📦 ${x.qty} garrafinha(s)</strong><small>${dateBR(x.date)}${x.note?" • "+esc(x.note):""}</small></div><div class="actions"><span class="badge purple">+${x.qty}</span><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editProduction(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteProduction(${x.id})">🗑️ Apagar</button></div></div>`).join("");
+  const withdrawalHTML=data.stockWithdrawals.slice().reverse().slice(0,50).map(x=>`<div class="item"><div><strong>🥤 ${x.qty} garrafinha(s) — consumo próprio</strong><small>${dateBR(x.date)}${x.note?" • "+esc(x.note):""}</small></div><div class="actions"><span class="badge red">-${x.qty}</span><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editStockWithdrawal(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteStockWithdrawal(${x.id})">🗑️ Apagar</button></div></div>`).join("");
+  productionList.innerHTML=(productionHTML||"")+((productionHTML&&withdrawalHTML)?'<div style="height:8px"></div>':"")+withdrawalHTML||`<div class="empty">Nenhuma movimentação de estoque registrada.</div>`;
+ const cashDate=selectedCashDate(),cashDay=getCashDay(cashDate),cashTotals=cashDayTotals(cashDate);
+ const cin=cashTotals.in;
+ const regularOut=data.cash.filter(x=>x.date===cashDate&&x.type==="Saída"&&x.kind!=="profit_withdrawal"&&x.kind!=="profit_expense"&&x.kind!=="profit_to_capital").reduce((a,x)=>a+Number(x.value||0),0);
+ const profitSeparatedToday=data.cash.filter(x=>x.date===cashDate&&x.kind==="profit_withdrawal").reduce((a,x)=>a+Number(x.value||0),0);
+ const profitSpentToday=data.cash.filter(x=>x.date===cashDate&&x.kind==="profit_expense").reduce((a,x)=>a+Number(x.value||0),0);
+ cashIn.textContent=brl(cin);cashOut.textContent=brl(regularOut);const cps=document.getElementById("cashProfitSeparatedToday");if(cps)cps.textContent=brl(profitSeparatedToday);const pav=document.getElementById("profitAvailable");if(pav)pav.textContent=brl(calculateProfitAvailable());cashBalance.textContent=brl(currentDayCashAvailable());
+ const wcBalance=workingCapital(),wcGoalCash=Number(data.settings.workingCapitalGoal)||0,wcGap=Math.max(0,wcGoalCash-wcBalance);
+ const cwc=document.getElementById("cashWorkingCapital"),cwg=document.getElementById("cashWorkingCapitalGoal"),cgap=document.getElementById("cashWorkingCapitalGap");
+ if(cwc)cwc.textContent=brl(wcBalance);if(cwg)cwg.textContent=brl(wcGoalCash);if(cgap)cgap.textContent=brl(wcGap);
+
+ if(cashDay?.opened){cashDayStatus.textContent=cashDay.closed?"Caixa fechado":"Caixa aberto";cashDayIcon.textContent=cashDay.closed?"🔒":"🔓";if(cashDay.closed){cashDayInfo.textContent=`Abertura: ${brl(cashDay.opening)}${cashDay.openingFromPrevious?" • veio do fechamento anterior":""} • Esperado: ${brl(cashDay.expected)} • Contado: ${brl(cashDay.counted)} • Diferença: ${brl(cashDay.difference)}`;}else{cashDayInfo.textContent=`Abertura: ${brl(cashDay.opening)} • Movimentos: +${brl(cashTotals.in)} / -${brl(cashTotals.out)}`;}}else{cashDayStatus.textContent="Caixa fechado";cashDayIcon.textContent="🔒";cashDayInfo.textContent="Abra o caixa para registrar o saldo inicial.";}
+ openCashBtn.style.display=cashDay?.opened?"none":"block";editOpeningCashBtn.style.display=cashDay?.opened?"block":"none";closeCashBtn.style.display=cashDay?.opened&&!cashDay.closed?"block":"none";
+ cashList.innerHTML=data.cash.slice().reverse().slice(0,80).map(x=>{const isProfit=x.kind==="profit_withdrawal",isProfitExpense=x.kind==="profit_expense",isProfitToCapital=x.kind==="profit_to_capital",isCapitalDeposit=x.kind==="working_capital_deposit";const special=isProfit||isProfitExpense||isProfitToCapital||isCapitalDeposit;const canEdit=x.kind!=="sale"&&!special;const label=isProfit?"Lucro separado":isProfitExpense?"Saída do lucro":isProfitToCapital?"Lucro → Capital de giro":isCapitalDeposit?"Reposição do capital":x.type;const badgeClass=(isProfit||isProfitExpense||isProfitToCapital)?"purple":x.type==="Entrada"?"green":"red";return `<div class="item"><div><strong>${esc(x.description||"Movimentação")}</strong><small>${dateBR(x.date)} • ${label}</small></div><div style="text-align:right"><span class="badge ${badgeClass}">${isProfit?"💚 ":isProfitExpense?"💳 ":isProfitToCapital?"🏦 ":isCapitalDeposit?"🏦 ":""}${x.type==="Entrada"?"+":"-"} ${brl(x.value)}</span><div class="actions" style="margin-top:6px;justify-content:flex-end">${canEdit?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editCash(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteCash(${x.id})">🗑️ Apagar</button>`:x.kind==="sale"?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="showTab('sell')">✏️ Editar venda</button>`:""}</div></div></div>`}).join("")||`<div class="empty">Nenhuma movimentação registrada.</div>`;
+ const wch=document.getElementById("workingCapitalHistory");
+ if(wch){const hist=(data.workingCapitalMovements||[]).slice().reverse().slice(0,30);wch.innerHTML=hist.length?hist.map(x=>`<div class="item"><div><strong>${x.kind==="withdraw"?"🏦 Uso do capital":"➕ Reposição do capital"}</strong><small>${dateBR(x.date)}${x.description?" • "+esc(x.description):""}</small></div><span class="badge ${x.kind==="withdraw"?"red":"green"}">${x.kind==="withdraw"?"-":"+"} ${brl(x.value)}</span></div>`).join(""):"<div class='empty'>Nenhum movimento do capital de giro ainda.</div>"}
+
+ settingPrice.value=data.settings.price;settingCost.value=data.settings.cost;const editBtn=document.getElementById("cancelEditBtn");if(editBtn)editBtn.style.display=editingSaleId?"block":"none";settingGoal.value=data.settings.goal;settingInitialStock.value=data.settings.initialStock;settingLowStock.value=data.settings.lowStock;settingWorkingCapitalGoal.value=data.settings.workingCapitalGoal;settingsWorkingCapital.textContent=brl(wc);settingsWorkingCapitalGoalView.textContent=brl(wcGoal);
+ ensureProductCatalog();
+ if(!Array.isArray(data.products) || data.products.length===0){ ensureProductCatalog(); }
+ productsList.innerHTML=data.products.map(p=>`<div class="item product-card"><div><strong>${esc(p.name)}</strong><div class="product-meta">${esc(p.category||"Açaí")} • ${p.stockItem===true?"Garrafinha":"Adicional"} • Venda ${brl(p.price)} • Custo ${brl(p.cost)}</div></div><div class="actions"><span class="badge ${p.active===false?"red":"green"}">${p.active===false?"inativo":"ativo"}</span><button class="secondary" style="padding:7px 9px;font-size:11px" onclick="editProduct('${esc(p.id)}')">✏️ Editar</button><button class="secondary" style="padding:7px 9px;font-size:11px" onclick="toggleProduct('${esc(p.id)}')">${p.active===false?"Ativar":"Desativar"}</button><button class="danger" style="padding:7px 9px;font-size:11px" onclick="removeProduct('${esc(p.id)}')">Excluir</button></div></div>`).join("")||`<div class="empty">Nenhum produto cadastrado.</div>`;
+ const dl=document.getElementById("clientSuggestions");if(dl)dl.innerHTML=data.clients.map(c=>`<option value="${esc(c.name)}">${esc(c.phone)}</option>`).join("");
+ const cl=document.getElementById("clientsList");if(cl)cl.innerHTML=data.clients.slice().sort((a,b)=>String(a.name).localeCompare(String(b.name),"pt-BR")).map(c=>`<div class="item"><div><strong>${esc(c.name)}</strong><small>📲 ${esc(c.phone)}${c.address?" • "+esc(c.address):""}${c.note?"<br>"+esc(c.note):""}</small></div><div class="actions"><button class="secondary" style="padding:7px 9px;font-size:11px" onclick="editClient('${esc(c.id)}')">Editar</button><button class="danger" style="padding:7px 9px;font-size:11px" onclick="deleteClient('${esc(c.id)}')">Excluir</button></div></div>`).join("")||`<div class="empty">Nenhum cliente cadastrado.</div>`;
+
+ if(document.getElementById("orderItems")&&document.getElementById("orderItems").children.length===0)addOrderItem();
+}
+
+saleDate.value=today();
+const customerNameInput=customerNameEl();
+if(customerNameInput){customerNameInput.addEventListener("input",fillCustomerFromName);customerNameInput.addEventListener("change",fillCustomerFromName);customerNameInput.addEventListener("blur",fillCustomerFromName);}
+render();
+</script>
+
+<script>
+(function(){
+  function initProfit(){
+    const el=document.getElementById("profitMonth");
+    if(!el)return;
+    if(!el.value)el.value=today().slice(0,7);
+    el.onchange=renderProfitDashboard;
+    renderProfitDashboard();
+  }
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",initProfit);
+  else initProfit();
+})();
+</script>
+
+</body>
+</html>
