@@ -803,6 +803,17 @@ function startNewMonth(){
 function productionMonths(){const set=new Set([today().slice(0,7)]);(data.production||[]).forEach(x=>{const m=monthKey(x.date);if(/^\d{4}-\d{2}$/.test(m))set.add(m)});(data.stockWithdrawals||[]).forEach(x=>{const m=monthKey(x.date);if(/^\d{4}-\d{2}$/.test(m))set.add(m)});return [...set].sort().reverse()}
 function selectedProductionMonth(){return document.getElementById("productionMonth")?.value||today().slice(0,7)}
 function renderProductionMonthOptions(){const el=document.getElementById("productionMonth");if(!el)return;const current=el.value||today().slice(0,7);const months=productionMonths();el.innerHTML=months.map(m=>`<option value="${m}">${esc(monthLabel(m))}</option>`).join("");el.value=months.includes(current)?current:months[0]||today().slice(0,7)}
+function renderProductionHistory(){
+  const list=document.getElementById("productionList"); if(!list)return;
+  renderProductionMonthOptions();
+  const month=selectedProductionMonth();
+  const productions=(data.production||[]).filter(x=>monthKey(x.date)===month).slice().reverse().slice(0,100);
+  const withdrawals=(data.stockWithdrawals||[]).filter(x=>monthKey(x.date)===month).slice().reverse().slice(0,100);
+  const productionHTML=productions.map(x=>`<div class="item"><div><strong>📦 ${Number(x.qty||0)} garrafinha(s)</strong><small>${dateBR(x.date)}${x.note?" • "+esc(x.note):""}</small></div><div class="actions"><span class="badge purple">+${Number(x.qty||0)}</span><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editProduction(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteProduction(${x.id})">🗑️ Apagar</button></div></div>`).join("");
+  const withdrawalHTML=withdrawals.map(x=>`<div class="item"><div><strong>🥤 ${Number(x.qty||0)} garrafinha(s) — consumo próprio</strong><small>${dateBR(x.date)}${x.note?" • "+esc(x.note):""}</small></div><div class="actions"><span class="badge red">-${Number(x.qty||0)}</span><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editStockWithdrawal(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteStockWithdrawal(${x.id})">🗑️ Apagar</button></div></div>`).join("");
+  if(productionHTML||withdrawalHTML) list.innerHTML=productionHTML+((productionHTML&&withdrawalHTML)?'<div style="height:8px"></div>':"")+withdrawalHTML;
+  else list.innerHTML=`<div class="empty">Nenhuma movimentação de estoque registrada em ${esc(monthLabel(month))}.</div>`;
+}
 function reportMonths(){const set=new Set([today().slice(0,7)]);data.sales.forEach(x=>{const m=monthKey(x.date);if(/^\d{4}-\d{2}$/.test(m))set.add(m)});return [...set].sort().reverse()}
 function monthLabel(m){if(m==="all")return "Todo o período";const [y,mo]=m.split("-").map(Number);return new Date(y,mo-1,1).toLocaleDateString("pt-BR",{month:"long",year:"numeric"}).replace(/^./,c=>c.toUpperCase())}
 function selectedReportMonth(){const el=document.getElementById("reportMonth");return el?.value||today().slice(0,7)}
@@ -1053,7 +1064,7 @@ if(editableCashHistory) editableCashHistory.innerHTML=cashDaysHTML || '<div clas
  const productionMonth=selectedProductionMonth();
  const productionHTML=data.production.filter(x=>monthKey(x.date)===productionMonth).slice().reverse().slice(0,100).map(x=>`<div class="item"><div><strong>📦 ${x.qty} garrafinha(s)</strong><small>${dateBR(x.date)}${x.note?" • "+esc(x.note):""}</small></div><div class="actions"><span class="badge purple">+${x.qty}</span><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editProduction(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteProduction(${x.id})">🗑️ Apagar</button></div></div>`).join("");
   const withdrawalHTML=data.stockWithdrawals.filter(x=>monthKey(x.date)===productionMonth).slice().reverse().slice(0,100).map(x=>`<div class="item"><div><strong>🥤 ${x.qty} garrafinha(s) — consumo próprio</strong><small>${dateBR(x.date)}${x.note?" • "+esc(x.note):""}</small></div><div class="actions"><span class="badge red">-${x.qty}</span><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editStockWithdrawal(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteStockWithdrawal(${x.id})">🗑️ Apagar</button></div></div>`).join("");
-  productionList.innerHTML=(productionHTML||"")+((productionHTML&&withdrawalHTML)?'<div style="height:8px"></div>':"")+withdrawalHTML||`<div class="empty">Nenhuma movimentação de estoque registrada em ${esc(monthLabel(productionMonth))}.</div>`;
+  renderProductionHistory();
  const cashDate=selectedCashDate(),cashDay=getCashDay(cashDate),cashTotals=cashDayTotals(cashDate);
  const cin=cashTotals.in;
  const regularOut=data.cash.filter(x=>x.date===cashDate&&x.type==="Saída"&&x.kind!=="profit_withdrawal"&&x.kind!=="profit_expense"&&x.kind!=="profit_to_capital").reduce((a,x)=>a+Number(x.value||0),0);
@@ -1095,6 +1106,30 @@ function renderClientsOnly(){
 }
 renderClientsOnly();
 renderProductCatalogOnly();
+
+// Histórico de produção isolado: renderiza mesmo se outra parte do painel falhar.
+function renderProductionHistoryOnly(){
+  try{
+    const list=document.getElementById("productionList");
+    if(!list)return;
+    const select=document.getElementById("productionMonth");
+    const current=select?.value||today().slice(0,7);
+    const months=productionMonths();
+    if(select){
+      select.innerHTML=months.map(m=>`<option value="${m}">${esc(monthLabel(m))}</option>`).join("");
+      select.value=months.includes(current)?current:(months[0]||today().slice(0,7));
+    }
+    const month=select?.value||today().slice(0,7);
+    const productions=(data.production||[]).filter(x=>monthKey(x.date)===month).slice().reverse();
+    const withdrawals=(data.stockWithdrawals||[]).filter(x=>monthKey(x.date)===month).slice().reverse();
+    const rows=[
+      ...productions.map(x=>({date:x.date,html:`<div class="item"><div><strong>📦 ${Number(x.qty||0)} garrafinha(s) produzidas</strong><small>${dateBR(x.date)}${x.note?" • "+esc(x.note):""}</small></div><div class="actions"><span class="badge purple">+${Number(x.qty||0)}</span><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editProduction(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteProduction(${x.id})">🗑️ Apagar</button></div></div>`})),
+      ...withdrawals.map(x=>({date:x.date,html:`<div class="item"><div><strong>🥤 ${Number(x.qty||0)} garrafinha(s) — consumo próprio</strong><small>${dateBR(x.date)}${x.note?" • "+esc(x.note):""}</small></div><div class="actions"><span class="badge red">-${Number(x.qty||0)}</span><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editStockWithdrawal(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteStockWithdrawal(${x.id})">🗑️ Apagar</button></div></div>`}))
+    ].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+    list.innerHTML=rows.map(r=>r.html).join("")||`<div class="empty">Nenhuma movimentação de estoque registrada em ${esc(monthLabel(month))}.</div>`;
+  }catch(e){console.error("Falha no histórico de produção",e);}
+}
+renderProductionHistoryOnly();
 </script>
 
 <script>
