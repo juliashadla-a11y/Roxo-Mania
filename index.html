@@ -885,7 +885,10 @@ function closeCash(){
 function getActiveCashDate(){
  const dates=Object.keys(data.cashDays||{}).sort().reverse();
  const openDate=dates.find(d=>data.cashDays[d]?.opened && !data.cashDays[d]?.closed);
- return cashViewDate||openDate||today();
+ // Um caixa aberto sempre tem prioridade sobre uma data histórica selecionada.
+ // Isso garante que a tela Caixa/Saldos entre no mesmo caixa que aparece como aberto no histórico.
+ if(openDate) return openDate;
+ return cashViewDate||today();
 }
 function selectedCashDate(){return getActiveCashDate();}
 function enterHistoricalCash(date){
