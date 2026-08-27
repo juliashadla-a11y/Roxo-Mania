@@ -894,15 +894,38 @@ function leaveHistoricalCash(){cashViewDate=null;render();}
 
 // Entrada robusta no caixa pelo histórico: usa delegação de evento para não depender
 // do onclick inline depois que o histórico é re-renderizado.
-document.addEventListener("click",function(e){
-  const btn=e.target.closest?.("[data-enter-cash]");
+function enterCashFromHistoryButton(btn){
+  const date=btn?.getAttribute?.("data-enter-cash");
+  if(!date || !data.cashDays?.[date]){alert("Esse caixa não está registrado.");return false;}
+  cashViewDate=date;
+  const target=document.getElementById("cash");
+  if(target){
+    document.querySelectorAll("section").forEach(s=>s.classList.remove("show"));
+    target.classList.add("show");
+    document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));
+    const n=document.getElementById("n-cash"); if(n)n.classList.add("active");
+  }
+  render();
+  window.scrollTo({top:0,behavior:"smooth"});
+  return false;
+}
+
+// Captura em fase de captura para funcionar mesmo se algum elemento/handler
+// acima do botão estiver impedindo o click normal no Safari/iPhone.
+document.addEventListener("pointerdown",function(e){
+  const path=e.composedPath?e.composedPath():[];
+  const btn=(path.find?.(x=>x?.getAttribute?.("data-enter-cash"))) || e.target?.closest?.("[data-enter-cash]");
   if(!btn)return;
   e.preventDefault(); e.stopPropagation();
-  const date=btn.getAttribute("data-enter-cash");
-  if(!date || !data.cashDays?.[date]){alert("Esse caixa não está registrado.");return;}
-  cashViewDate=date;
-  showTab("cash");
-});
+  enterCashFromHistoryButton(btn);
+},true);
+document.addEventListener("click",function(e){
+  const path=e.composedPath?e.composedPath():[];
+  const btn=(path.find?.(x=>x?.getAttribute?.("data-enter-cash"))) || e.target?.closest?.("[data-enter-cash]");
+  if(!btn)return;
+  e.preventDefault(); e.stopPropagation();
+  enterCashFromHistoryButton(btn);
+},true);
 
 function currentDayCashAvailable(){
  const d=selectedCashDate(),day=getCashDay(d);
@@ -1042,7 +1065,7 @@ function renderReportMonthOptions(){const el=document.getElementById("reportMont
 
 function render(){
 
-const cashDaysHTML=Object.entries(data.cashDays||{}).sort(([a],[b])=>b.localeCompare(a)).map(([date,day])=>`<div class="item"><div><strong>💰 Caixa — ${dateBR(date)}</strong><small>Abertura: ${brl(day.opening||0)} • ${day.closed?`Fechamento: ${brl(day.counted||0)} • Esperado: ${brl(day.expected||0)} • Diferença: ${brl(day.difference||0)}`:"Ainda aberto"}</small></div><div class="actions"><span class="badge purple">${day.closed?"Fechado":"Aberto"}</span>${day.closed?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="reopenCashDay('${date}')">🔓 Reabrir</button>`:`<button class="primary" style="padding:6px 8px;font-size:11px" onclick="closeHistoricalCash('${date}')">🔒 Fechar agora</button>`}<button class="primary" style="padding:6px 8px;font-size:11px" type="button" data-enter-cash="${date}">👁️ Entrar</button><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editCashDay('${date}')">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteCashDay('${date}')">🗑️ Apagar</button></div></div>`).join("");
+const cashDaysHTML=Object.entries(data.cashDays||{}).sort(([a],[b])=>b.localeCompare(a)).map(([date,day])=>`<div class="item"><div><strong>💰 Caixa — ${dateBR(date)}</strong><small>Abertura: ${brl(day.opening||0)} • ${day.closed?`Fechamento: ${brl(day.counted||0)} • Esperado: ${brl(day.expected||0)} • Diferença: ${brl(day.difference||0)}`:"Ainda aberto"}</small></div><div class="actions"><span class="badge purple">${day.closed?"Fechado":"Aberto"}</span>${day.closed?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="reopenCashDay('${date}')">🔓 Reabrir</button>`:`<button class="primary" style="padding:6px 8px;font-size:11px" onclick="closeHistoricalCash('${date}')">🔒 Fechar agora</button>`}<button class="primary enter-cash-btn" style="padding:6px 8px;font-size:11px;position:relative;z-index:50;pointer-events:auto" type="button" data-enter-cash="${date}" onclick="return enterCashFromHistoryButton(this)">👁️ Entrar</button><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editCashDay('${date}')">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteCashDay('${date}')">🗑️ Apagar</button></div></div>`).join("");
 const editableCashHistory=document.getElementById("editableCashHistory");
 if(editableCashHistory) editableCashHistory.innerHTML=cashDaysHTML || '<div class="empty">Nenhum caixa anterior registrado.</div>';
 
