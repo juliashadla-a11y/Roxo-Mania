@@ -734,6 +734,8 @@ function addStockWithdrawal(e){
   const available=stock();
   if(qty>available){alert(`Você tem apenas ${available} garrafinha(s) disponível(is) no estoque.`);return}
   data.stockWithdrawals.push({id:Date.now(),date:today(),qty,note});
+  const productionMonthEl=document.getElementById("productionMonth");
+  if(productionMonthEl) productionMonthEl.value=monthKey(today());
   save();e.target.reset();render();alert(`${qty} garrafinha(s) retirada(s) do estoque. 🥤`);
 }
 function editStockWithdrawal(id){
@@ -760,6 +762,8 @@ function saveProduction(e){
     save();render();alert("Produção atualizada! 📦");return;
   }
   data.production.push({id:Date.now(),date:today(),qty,note});
+  const productionMonthEl=document.getElementById("productionMonth");
+  if(productionMonthEl) productionMonthEl.value=monthKey(today());
   save();e.target.reset();render();alert("Produção salva e adicionada ao estoque! 📦");
 }
 function editProduction(id){
