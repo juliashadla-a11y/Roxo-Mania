@@ -1208,5 +1208,19 @@ renderProductionHistoryOnly();
 })();
 </script>
 
+<script>
+(function(){
+ document.addEventListener('click',function(e){
+  const b=e.target.closest && e.target.closest('[data-enter-cash], .enter-cash, button[title*="Entrar"], button[aria-label*="Entrar"]');
+  if(!b) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  const d=b.getAttribute('data-date')||b.dataset.date||b.getAttribute('data-enter-cash');
+  try {
+   if(typeof window.enterHistoricalCash==='function'){ window.enterHistoricalCash(d); return; }
+   if(typeof window.showTab==='function'){ if(typeof window.cashViewDate!=='undefined') window.cashViewDate=d; window.showTab('cash'); }
+  } catch(err) { console.error(err); }
+ }, true);
+})();
+</script>
 </body>
 </html>
