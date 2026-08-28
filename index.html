@@ -1104,6 +1104,17 @@ function renderCashPanel(){
       else if(day?.opened)info.textContent=`Abertura: ${brl(day.opening||0)} • Esperado: ${brl(day.expected||0)} • Contado: ${brl(day.counted||0)} • Diferença: ${brl(day.difference||0)}`;
       else info.textContent='Abra o caixa para registrar o saldo inicial.';
     }
+    const listEl=document.getElementById('cashList');
+    if(listEl){
+      listEl.innerHTML=entries.slice().reverse().map(x=>{
+        const isProfit=x.kind==='profit_withdrawal', isProfitExpense=x.kind==='profit_expense', isProfitToCapital=x.kind==='profit_to_capital', isCapitalDeposit=x.kind==='working_capital_deposit';
+        const special=isProfit||isProfitExpense||isProfitToCapital||isCapitalDeposit;
+        const canEdit=x.kind!=='sale'&&!special;
+        const label=isProfit?'Lucro separado':isProfitExpense?'Saída do lucro':isProfitToCapital?'Lucro → Capital de giro':isCapitalDeposit?'Reposição do capital':x.type;
+        const badgeClass=(isProfit||isProfitExpense||isProfitToCapital)?'purple':x.type==='Entrada'?'green':'red';
+        return `<div class="item"><div><strong>${esc(x.description||'Movimentação')}</strong><small>${dateBR(x.date)} • ${label}</small></div><div style="text-align:right"><span class="badge ${badgeClass}">${isProfit?'💚 ':isProfitExpense?'💳 ':isProfitToCapital?'🏦 ':isCapitalDeposit?'🏦 ':''}${x.type==='Entrada'?'+':'-'} ${brl(x.value)}</span><div class="actions" style="margin-top:6px;justify-content:flex-end">${canEdit?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editCash(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteCash(${x.id})">🗑️ Apagar</button>`:x.kind==='sale'?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="showTab('sell')">✏️ Editar venda</button>`:''}</div></div></div>`;
+      }).join('') || `<div class="empty">Nenhuma movimentação registrada.</div>`;
+    }
     const openBtn=document.getElementById('openCashBtn'),editBtn=document.getElementById('editOpeningCashBtn'),closeBtn=document.getElementById('closeCashBtn');
     if(openBtn)openBtn.style.display=day?.opened?'none':'block';
     if(editBtn)editBtn.style.display=day?.opened?'block':'none';
