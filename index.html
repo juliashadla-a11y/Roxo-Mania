@@ -434,7 +434,7 @@ function moneyInput(raw){
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
 function save(){localStorage.setItem(KEY,JSON.stringify(data))}
 function realToday(){const d=new Date();const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),day=String(d.getDate()).padStart(2,"0");return `${y}-${m}-${day}`}
-function today(){return data?.settings?.businessDate||realToday()}
+function today(){return realToday()} // Usa sempre a data real do aparelho; registros antigos mantêm suas próprias datas.
 function dateBR(d){return d?new Date(d+"T12:00:00").toLocaleDateString("pt-BR"):""}
 function openCashScreen(date=null){
   const requested=date&&data.cashDays?.[date]?.opened?date:null;
