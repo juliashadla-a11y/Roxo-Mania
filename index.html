@@ -138,7 +138,13 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
   <div id="fixedBillsList" class="list"></div>
 </div>
 <div style="height:14px"></div>
-<div class="card"><h3 style="margin-bottom:10px">📚 Histórico dos meses</h3><div id="profitMonthlyHistory" class="list"></div></div>
+<div class="card" id="profitMovementsCard">
+  <h3 style="margin-bottom:8px">💳 Movimentações do lucro</h3>
+  <p class="mini">Aqui ficam as saídas que você já registrou usando o lucro, incluindo pagamentos de contas fixas. Você pode editar ou apagar cada movimentação sem mexer nas vendas ou no caixa da Roxo Mania.</p>
+  <div class="field" style="margin-bottom:10px"><label>Mês das movimentações</label><input id="profitMovementMonth" type="month" onchange="renderProfitMovements()"></div>
+  <div id="profitMovementsList" class="list"></div>
+</div>
+<div style="height:14px"></div><div class="card"><h3 style="margin-bottom:10px">📚 Histórico dos meses</h3><div id="profitMonthlyHistory" class="list"></div></div>
 </section>
 
 <section id="production">
@@ -1142,6 +1148,49 @@ function renderFixedBills(){
   }).join(''):`<div class='empty'>Nenhuma conta fixa cadastrada. 💜</div>`;
 }
 
+function editProfitMovement(id){
+  const x=(data.cash||[]).find(x=>String(x.id)===String(id)&&x.kind==='profit_expense');
+  if(!x)return;
+  const current=Number(x.value||0);
+  const rawValue=prompt(`Novo valor para "${x.description||'Saída do lucro'}":`,current.toFixed(2));
+  if(rawValue===null)return;
+  const value=moneyInput(rawValue);
+  if(!Number.isFinite(value)||value<=0){alert('Digite um valor válido maior que zero.');return}
+  const availableWithoutThis=calculateProfitAvailable()+current;
+  if(value>availableWithoutThis){alert(`O valor informado (${brl(value)}) é maior que o lucro disponível após considerar esta movimentação (${brl(availableWithoutThis)}).`);return}
+  const rawDesc=prompt('Descrição:',String(x.description||'Saída do lucro'));
+  if(rawDesc===null)return;
+  const description=rawDesc.trim()||'Saída do lucro';
+  if(x.fixedBillId){
+    const p=(data.fixedBillPayments||[]).find(p=>String(p.billId)===String(x.fixedBillId)&&p.month===x.fixedBillMonth);
+    if(p)p.value=value;
+  }
+  x.value=value;x.description=description;
+  save();render();renderProfitMovements();renderFixedBills();
+}
+function deleteProfitMovement(id){
+  const i=(data.cash||[]).findIndex(x=>String(x.id)===String(id)&&x.kind==='profit_expense');
+  if(i<0)return;
+  const x=data.cash[i];
+  if(!confirm(`Apagar a saída do lucro "${x.description||'Saída do lucro'}" de ${brl(x.value)}?`))return;
+  if(x.fixedBillId){
+    const pi=(data.fixedBillPayments||[]).findIndex(p=>String(p.billId)===String(x.fixedBillId)&&p.month===x.fixedBillMonth);
+    if(pi>=0)data.fixedBillPayments.splice(pi,1);
+  }
+  data.cash.splice(i,1);
+  save();render();renderProfitMovements();renderFixedBills();
+}
+function renderProfitMovements(){
+  const list=document.getElementById('profitMovementsList'),monthEl=document.getElementById('profitMovementMonth');
+  if(!list)return;
+  const month=monthEl?.value||today().slice(0,7);if(monthEl)monthEl.value=month;
+  const rows=(data.cash||[]).filter(x=>x.kind==='profit_expense'&&monthKey(x.date)===month).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))||Number(b.id)-Number(a.id));
+  list.innerHTML=rows.length?rows.map(x=>{
+    const fixed=!!x.fixedBillId;
+    return `<div class="item"><div><strong>${fixed?'🏠 ':'💳 '}${esc(x.description||'Saída do lucro')}</strong><small>${dateBR(x.date)}${fixed?' • Conta fixa':''}</small></div><div class="actions"><span class="badge red">- ${brl(x.value)}</span><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editProfitMovement('${x.id}')">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteProfitMovement('${x.id}')">🗑️ Apagar</button></div></div>`;
+  }).join(''):`<div class='empty'>Nenhuma saída do lucro registrada neste mês.</div>`;
+}
+
 function renderProfitDashboard(){
   const monthEl=document.getElementById("profitMonth");
   const totalEl=document.getElementById("profitMonthTotal");
@@ -1226,7 +1275,7 @@ if(editableCashHistory) editableCashHistory.innerHTML=cashDaysHTML || '<div clas
   :fs.reduce((a,x)=>a+(x.items||[]).reduce((z,i)=>z+Number(i.qty||0),0),0)),fp=salesProfit(fs),fticket=fs.length?fr/fs.length:0,fcustomers=new Set(fs.map(x=>x.customerName?.toLowerCase()).filter(Boolean)).size;
  allRevenue.textContent=brl(fr);allQty.textContent=fq;avgTicket.textContent=brl(fticket);customerCount.textContent=fcustomers;
  reportSummary.innerHTML=`<strong>${esc(monthLabel(selectedReportMonth()))}</strong> • <strong>${fs.length}</strong> pedido(s) • <strong>${fq}</strong> garrafinha(s) • <strong>${brl(fr)}</strong> faturados • <strong>${brl(fp)}</strong> de lucro estimado`;
- renderMonthlyHistory();renderFixedBills();const pmh=document.getElementById("profitMonthlyHistory");if(pmh){const months=[...new Set(data.sales.map(x=>monthKey(x.date)))].sort().reverse();pmh.innerHTML=months.map(m=>{const rows=data.sales.filter(x=>monthKey(x.date)===m);return `<div class="item"><div><strong>${esc(monthLabel(m))}</strong><small>${rows.length} pedido(s)</small></div><span class="badge green">${brl(salesProfit(rows))} lucro</span></div>`}).join("")||`<div class="empty">Nenhum lucro registrado ainda.</div>`;}
+ renderMonthlyHistory();renderFixedBills();renderProfitMovements();const pmh=document.getElementById("profitMonthlyHistory");if(pmh){const months=[...new Set(data.sales.map(x=>monthKey(x.date)))].sort().reverse();pmh.innerHTML=months.map(m=>{const rows=data.sales.filter(x=>monthKey(x.date)===m);return `<div class="item"><div><strong>${esc(monthLabel(m))}</strong><small>${rows.length} pedido(s)</small></div><span class="badge green">${brl(salesProfit(rows))} lucro</span></div>`}).join("")||`<div class="empty">Nenhum lucro registrado ainda.</div>`;}
  const saleHTML=data.sales.slice().reverse().slice(0,50).map(x=>{const names=(x.items||[]).map(i=>`${i.qty}x ${esc(i.name)}`).join(" • ");return `<div class="item"><div><strong>${esc(x.customerName||"")}</strong><small>${names}<br>${dateBR(x.date)} • ${x.payment?esc(x.payment):""}${x.delivery?.startsWith("Entrega")?` • ${esc(x.delivery)}${Number(x.deliveryFee||0)>0?" + "+brl(x.deliveryFee):""}`:""}</small></div><div style="text-align:right"><span class="badge green">${brl(x.total)}</span><div class="actions" style="margin-top:6px;justify-content:flex-end"><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editSale(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteSale(${x.id})">🗑️ Apagar</button>${x.customerPhone?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="sendSaleWhatsApp(${x.id})">📲 WhatsApp</button>`:""}</div></div></div>`}).join("");salesList.innerHTML=saleHTML||`<div class="empty">Nenhum pedido registrado ainda. 💜</div>`;
   const todayHTML=data.sales.filter(x=>x.date===t).slice().reverse().map(x=>{const names=(x.items||[]).map(i=>`${i.qty}x ${esc(i.name)}`).join(" • ");return `<div class="item"><div><strong>${esc(x.customerName||"")}</strong><small>${names}<br>${dateBR(x.date)} • ${x.payment?esc(x.payment):""}${x.delivery?.startsWith("Entrega")?` • ${esc(x.delivery)}${Number(x.deliveryFee||0)>0?" + "+brl(x.deliveryFee):""}`:""}</small></div><div style="text-align:right"><span class="badge green">${brl(x.total)}</span><div class="actions" style="margin-top:6px;justify-content:flex-end"><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editSale(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteSale(${x.id})">🗑️ Apagar</button>${x.customerPhone?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="sendSaleWhatsApp(${x.id})">📲 WhatsApp</button>`:""}</div></div></div>`}).join("");
   todaySalesList.innerHTML=todayHTML||`<div class="empty">Nenhuma venda hoje. 💜</div>`;
