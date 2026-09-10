@@ -124,6 +124,20 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <div style="height:14px"></div>
 <div class="card"><h3 style="margin-bottom:8px">💳 Registrar saída do lucro</h3><p class="mini">Use quando você comprar algo usando o dinheiro que já foi separado como lucro. Essa saída reduz somente o lucro disponível, sem mexer no saldo do caixa.</p><form onsubmit="addProfitExpense(event)"><div class="row"><div class="field"><label>Valor</label><input id="profitExpenseValue" type="number" min="0" step=".01" required></div><div class="field"><label>Descrição</label><input id="profitExpenseDescription" type="text" placeholder="Ex.: Compra paga com o lucro"></div></div><button class="secondary" type="submit">💳 Registrar saída do lucro</button></form></div>
 <div style="height:14px"></div>
+<div class="card" id="fixedBillsCard">
+  <h3 style="margin-bottom:6px">🏠 Contas fixas do casal</h3>
+  <p class="mini">Cadastre aqui as contas de casa/casal que serão pagas com o lucro da Roxo Mania. Elas não entram como despesa da empresa e não alteram o caixa do negócio.</p>
+  <form onsubmit="saveFixedBill(event)">
+    <div class="row"><div class="field"><label>Nome da conta</label><input id="fixedBillName" type="text" placeholder="Ex.: Aluguel" required></div><div class="field"><label>Valor mensal</label><input id="fixedBillValue" type="number" min="0" step=".01" required></div></div>
+    <div class="row"><div class="field"><label>Dia do vencimento</label><input id="fixedBillDueDay" type="number" min="1" max="31" step="1" placeholder="Ex.: 10" required></div><div class="field"><label>Categoria (opcional)</label><input id="fixedBillCategory" type="text" placeholder="Ex.: Casa"></div></div>
+    <div class="actions"><button id="fixedBillSubmitBtn" class="primary" type="submit">➕ Cadastrar conta fixa</button><button id="cancelFixedBillEditBtn" class="secondary" type="button" onclick="cancelFixedBillEdit()" style="display:none">Cancelar edição</button></div>
+  </form>
+  <div style="height:12px"></div>
+  <div class="field" style="margin-bottom:10px"><label>Mês das contas</label><input id="fixedBillMonth" type="month" onchange="renderFixedBills()"></div>
+  <div id="fixedBillsSummary" class="notice"></div>
+  <div id="fixedBillsList" class="list"></div>
+</div>
+<div style="height:14px"></div>
 <div class="card"><h3 style="margin-bottom:10px">📚 Histórico dos meses</h3><div id="profitMonthlyHistory" class="list"></div></div>
 </section>
 
@@ -188,7 +202,7 @@ const defaultProducts=[
  {id:"avelã",name:"Creme de avelã",price:15,cost:12.48,category:"Açaí",stockItem:true,active:true},
  {id:"morango",name:"Creme de morango",price:15,cost:10.98,category:"Açaí",stockItem:true,active:true}
 ];
-const defaults={sales:[],cash:[],cashDays:{},production:[],stockWithdrawals:[],profitAdjustments:[],products:defaultProducts,clients:[],workingCapitalMovements:[],settings:{price:15,cost:10,goal:300,initialStock:0,lowStock:5,workingCapitalGoal:500,workingCapitalBalance:0,businessDate:"2026-09-01"}};
+const defaults={sales:[],cash:[],cashDays:{},production:[],stockWithdrawals:[],profitAdjustments:[],products:defaultProducts,clients:[],workingCapitalMovements:[],fixedBills:[],fixedBillPayments:[],settings:{price:15,cost:10,goal:300,initialStock:0,lowStock:5,workingCapitalGoal:500,workingCapitalBalance:0,businessDate:"2026-09-01"}};
 
 function inferStockItem(p){
   const c=String(p?.category||"").toLowerCase();
@@ -232,6 +246,8 @@ function normalizeData(base){
   out.stockWithdrawals=Array.isArray(base.stockWithdrawals)?base.stockWithdrawals:[];
   out.profitAdjustments=Array.isArray(base.profitAdjustments)?base.profitAdjustments:[];
   out.workingCapitalMovements=Array.isArray(base.workingCapitalMovements)?base.workingCapitalMovements:[];
+  out.fixedBills=Array.isArray(base.fixedBills)?base.fixedBills:[];
+  out.fixedBillPayments=Array.isArray(base.fixedBillPayments)?base.fixedBillPayments:[];
   out.settings.workingCapitalGoal=Math.max(0,Number(out.settings.workingCapitalGoal)||0);
   out.settings.workingCapitalBalance=Math.max(0,Number(out.settings.workingCapitalBalance)||0);
   out.settings.businessDate=out.settings.businessDate||"2026-09-01";
@@ -1056,6 +1072,76 @@ function viewProfitDay(date){
   const r=profitForDateDetailed(date);
   alert("Resumo de "+dateBR(date)+"\n\nFaturamento sem entrega: "+brl(r.revenue)+"\nCustos: "+brl(r.costs)+"\nLucro calculado: "+brl(r.calculated)+"\nAjuste manual: "+brl(r.adjustment)+"\nLucro final: "+brl(r.final)+"\nVendas: "+r.sales);
 }
+function fixedBillMonthKey(date=today()){return String(date||today()).slice(0,7)}
+function fixedBillPaymentFor(billId,month){return (data.fixedBillPayments||[]).find(x=>String(x.billId)===String(billId)&&x.month===month)||null}
+function fixedBillDueDate(bill,month){const [y,m]=String(month).split('-').map(Number);const last=new Date(y,m,0).getDate();const day=Math.min(Math.max(1,Number(bill.dueDay)||1),last);return `${month}-${String(day).padStart(2,'0')}`}
+function fixedBillStatus(bill,month){const payment=fixedBillPaymentFor(bill.id,month);if(payment)return 'paid';const due=fixedBillDueDate(bill,month);return today()>due?'overdue':'pending'}
+let editingFixedBillId=null;
+function saveFixedBill(e){
+  e.preventDefault();
+  const name=document.getElementById('fixedBillName')?.value.trim()||'';
+  const value=moneyInput(document.getElementById('fixedBillValue')?.value||'');
+  const dueDay=Number(document.getElementById('fixedBillDueDay')?.value||0);
+  const category=document.getElementById('fixedBillCategory')?.value.trim()||'';
+  if(!name||!Number.isFinite(value)||value<0||dueDay<1||dueDay>31){alert('Preencha nome, valor e um dia de vencimento entre 1 e 31.');return}
+  data.fixedBills=data.fixedBills||[];
+  if(editingFixedBillId!==null){
+    const bill=data.fixedBills.find(x=>String(x.id)===String(editingFixedBillId));
+    if(bill)Object.assign(bill,{name,value,dueDay,category,active:true});
+  }else data.fixedBills.push({id:Date.now(),name,value,dueDay,category,active:true,createdAt:new Date().toISOString()});
+  editingFixedBillId=null;save();e.target.reset();render();renderFixedBills();
+}
+function editFixedBill(id){
+  const bill=(data.fixedBills||[]).find(x=>String(x.id)===String(id));if(!bill)return;
+  editingFixedBillId=id;
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v??''};
+  set('fixedBillName',bill.name);set('fixedBillValue',Number(bill.value||0).toFixed(2));set('fixedBillDueDay',bill.dueDay);set('fixedBillCategory',bill.category||'');
+  const btn=document.getElementById('fixedBillSubmitBtn');if(btn)btn.textContent='💾 Salvar alteração';
+  const cancel=document.getElementById('cancelFixedBillEditBtn');if(cancel)cancel.style.display='block';
+  document.getElementById('fixedBillsCard')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function cancelFixedBillEdit(){editingFixedBillId=null;const form=document.querySelector('#fixedBillsCard form');if(form)form.reset();const btn=document.getElementById('fixedBillSubmitBtn');if(btn)btn.textContent='➕ Cadastrar conta fixa';const cancel=document.getElementById('cancelFixedBillEditBtn');if(cancel)cancel.style.display='none'}
+function deleteFixedBill(id){
+  const bill=(data.fixedBills||[]).find(x=>String(x.id)===String(id));if(!bill)return;
+  if(!confirm(`Excluir a conta fixa "${bill.name}"? Os pagamentos históricos serão preservados.`))return;
+  bill.active=false;save();render();renderFixedBills();
+}
+function payFixedBill(id,month){
+  const bill=(data.fixedBills||[]).find(x=>String(x.id)===String(id));if(!bill)return;
+  if(fixedBillPaymentFor(id,month)){alert('Essa conta já está marcada como paga neste mês.');return}
+  const value=Number(bill.value||0),available=calculateProfitAvailable();
+  if(value>available){alert(`O lucro disponível é ${brl(available)} e a conta é ${brl(value)}. Separe mais lucro antes de pagar esta conta.`);return}
+  const due=fixedBillDueDate(bill,month);
+  data.fixedBillPayments=data.fixedBillPayments||[];
+  const payment={id:Date.now(),billId:id,month,value,paidAt:today(),dueDate:due};
+  data.fixedBillPayments.push(payment);
+  data.cash=data.cash||[];
+  data.cash.push({id:Date.now()+1,date:today(),type:'Saída',value,description:`Conta fixa: ${bill.name}`,kind:'profit_expense',fixedBillId:id,fixedBillMonth:month,createdAt:new Date().toISOString()});
+  save();render();renderFixedBills();alert(`Conta "${bill.name}" marcada como paga. ${brl(value)} foi descontado do lucro disponível.`);
+}
+function undoFixedBillPayment(id,month){
+  const i=(data.fixedBillPayments||[]).findIndex(x=>String(x.billId)===String(id)&&x.month===month);if(i<0)return;
+  const pmt=data.fixedBillPayments[i];
+  if(!confirm('Desfazer o pagamento desta conta? O valor voltará para o lucro disponível.'))return;
+  data.fixedBillPayments.splice(i,1);
+  data.cash=(data.cash||[]).filter(x=>!(x.kind==='profit_expense'&&String(x.fixedBillId)===String(id)&&x.fixedBillMonth===month&&Number(x.value)===Number(pmt.value)));
+  save();render();renderFixedBills();
+}
+function renderFixedBills(){
+  const list=document.getElementById('fixedBillsList'),summary=document.getElementById('fixedBillsSummary'),monthEl=document.getElementById('fixedBillMonth');
+  if(!list||!summary)return;
+  const month=monthEl?.value||today().slice(0,7);if(monthEl)monthEl.value=month;
+  const bills=(data.fixedBills||[]).filter(x=>x.active!==false);
+  let total=0,paid=0,pending=0,overdue=0;
+  const rows=bills.map(b=>{const st=fixedBillStatus(b,month),p=fixedBillPaymentFor(b.id,month);total+=Number(b.value||0);if(st==='paid')paid+=Number(p?.value||b.value||0);else if(st==='overdue')overdue+=Number(b.value||0);else pending+=Number(b.value||0);return {b,st,p}});
+  summary.innerHTML=`<strong>Contas do mês: ${brl(total)}</strong><div class='mini'>Pagas: ${brl(paid)} • Pendentes: ${brl(pending)} • Vencidas: ${brl(overdue)} • Lucro disponível: ${brl(calculateProfitAvailable())}</div>`;
+  list.innerHTML=rows.length?rows.map(({b,st,p})=>{
+    const badge=st==='paid'?`<span class="badge green">Paga</span>`:st==='overdue'?`<span class="badge red">Vencida</span>`:`<span class="badge purple">Pendente</span>`;
+    const action=st==='paid'?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="undoFixedBillPayment('${b.id}','${month}')">↩️ Desfazer pagamento</button>`:`<button class="primary" style="padding:6px 8px;font-size:11px" onclick="payFixedBill('${b.id}','${month}')">💚 Marcar como paga</button>`;
+    return `<div class="item"><div><strong>🏠 ${esc(b.name)}</strong><small>${brl(b.value)} • Vence dia ${b.dueDay}${b.category?` • ${esc(b.category)}`:''}${p?`<br>Pago em ${dateBR(p.paidAt)}`:''}</small></div><div class="actions">${badge}${action}<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editFixedBill('${b.id}')">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteFixedBill('${b.id}')">🗑️ Excluir</button></div></div>`;
+  }).join(''):`<div class='empty'>Nenhuma conta fixa cadastrada. 💜</div>`;
+}
+
 function renderProfitDashboard(){
   const monthEl=document.getElementById("profitMonth");
   const totalEl=document.getElementById("profitMonthTotal");
@@ -1140,7 +1226,7 @@ if(editableCashHistory) editableCashHistory.innerHTML=cashDaysHTML || '<div clas
   :fs.reduce((a,x)=>a+(x.items||[]).reduce((z,i)=>z+Number(i.qty||0),0),0)),fp=salesProfit(fs),fticket=fs.length?fr/fs.length:0,fcustomers=new Set(fs.map(x=>x.customerName?.toLowerCase()).filter(Boolean)).size;
  allRevenue.textContent=brl(fr);allQty.textContent=fq;avgTicket.textContent=brl(fticket);customerCount.textContent=fcustomers;
  reportSummary.innerHTML=`<strong>${esc(monthLabel(selectedReportMonth()))}</strong> • <strong>${fs.length}</strong> pedido(s) • <strong>${fq}</strong> garrafinha(s) • <strong>${brl(fr)}</strong> faturados • <strong>${brl(fp)}</strong> de lucro estimado`;
- renderMonthlyHistory();const pmh=document.getElementById("profitMonthlyHistory");if(pmh){const months=[...new Set(data.sales.map(x=>monthKey(x.date)))].sort().reverse();pmh.innerHTML=months.map(m=>{const rows=data.sales.filter(x=>monthKey(x.date)===m);return `<div class="item"><div><strong>${esc(monthLabel(m))}</strong><small>${rows.length} pedido(s)</small></div><span class="badge green">${brl(salesProfit(rows))} lucro</span></div>`}).join("")||`<div class="empty">Nenhum lucro registrado ainda.</div>`;}
+ renderMonthlyHistory();renderFixedBills();const pmh=document.getElementById("profitMonthlyHistory");if(pmh){const months=[...new Set(data.sales.map(x=>monthKey(x.date)))].sort().reverse();pmh.innerHTML=months.map(m=>{const rows=data.sales.filter(x=>monthKey(x.date)===m);return `<div class="item"><div><strong>${esc(monthLabel(m))}</strong><small>${rows.length} pedido(s)</small></div><span class="badge green">${brl(salesProfit(rows))} lucro</span></div>`}).join("")||`<div class="empty">Nenhum lucro registrado ainda.</div>`;}
  const saleHTML=data.sales.slice().reverse().slice(0,50).map(x=>{const names=(x.items||[]).map(i=>`${i.qty}x ${esc(i.name)}`).join(" • ");return `<div class="item"><div><strong>${esc(x.customerName||"")}</strong><small>${names}<br>${dateBR(x.date)} • ${x.payment?esc(x.payment):""}${x.delivery?.startsWith("Entrega")?` • ${esc(x.delivery)}${Number(x.deliveryFee||0)>0?" + "+brl(x.deliveryFee):""}`:""}</small></div><div style="text-align:right"><span class="badge green">${brl(x.total)}</span><div class="actions" style="margin-top:6px;justify-content:flex-end"><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editSale(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteSale(${x.id})">🗑️ Apagar</button>${x.customerPhone?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="sendSaleWhatsApp(${x.id})">📲 WhatsApp</button>`:""}</div></div></div>`}).join("");salesList.innerHTML=saleHTML||`<div class="empty">Nenhum pedido registrado ainda. 💜</div>`;
   const todayHTML=data.sales.filter(x=>x.date===t).slice().reverse().map(x=>{const names=(x.items||[]).map(i=>`${i.qty}x ${esc(i.name)}`).join(" • ");return `<div class="item"><div><strong>${esc(x.customerName||"")}</strong><small>${names}<br>${dateBR(x.date)} • ${x.payment?esc(x.payment):""}${x.delivery?.startsWith("Entrega")?` • ${esc(x.delivery)}${Number(x.deliveryFee||0)>0?" + "+brl(x.deliveryFee):""}`:""}</small></div><div style="text-align:right"><span class="badge green">${brl(x.total)}</span><div class="actions" style="margin-top:6px;justify-content:flex-end"><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editSale(${x.id})">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteSale(${x.id})">🗑️ Apagar</button>${x.customerPhone?`<button class="secondary" style="padding:6px 8px;font-size:11px" onclick="sendSaleWhatsApp(${x.id})">📲 WhatsApp</button>`:""}</div></div></div>`}).join("");
   todaySalesList.innerHTML=todayHTML||`<div class="empty">Nenhuma venda hoje. 💜</div>`;
