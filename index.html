@@ -257,6 +257,22 @@ function normalizeData(base){
   out.settings.workingCapitalGoal=Math.max(0,Number(out.settings.workingCapitalGoal)||0);
   out.settings.workingCapitalBalance=Math.max(0,Number(out.settings.workingCapitalBalance)||0);
   out.settings.businessDate=out.settings.businessDate||"2026-09-01";
+  // Reconcile capital-of-working records with the corresponding Lucro/Caixa entries.
+  // Older versions could save the cash movement but lose the paired working-capital movement,
+  // which made the displayed balance stay at zero. This only adds missing capital movements.
+  if(Array.isArray(out.cash) && Array.isArray(out.workingCapitalMovements)){
+    const cashCapital=out.cash.filter(x=>x && (x.kind==="profit_to_capital" || x.kind==="working_capital_deposit"));
+    cashCapital.forEach(x=>{
+      const expectedKind=x.kind==="profit_to_capital"?"replenish_profit":"replenish_cash";
+      const exists=out.workingCapitalMovements.some(m=>
+        (m.sourceCashId!=null && String(m.sourceCashId)===String(x.id)) ||
+        (m.kind===expectedKind && String(m.date||"").slice(0,7)===String(x.date||"").slice(0,7) && Number(m.value||0)===Number(x.value||0) && String(m.description||"")===String(x.description||""))
+      );
+      if(!exists){
+        out.workingCapitalMovements.push({id:Date.now()+Math.random(),sourceCashId:x.id,date:x.date,value:Number(x.value||0),kind:expectedKind,description:x.description||"Movimento do capital de giro"});
+      }
+    });
+  }
   // Repair the current product master: Açaí products are bottles, not add-ons.
   out.products=out.products.map(p=>({ ...p, stockItem: inferStockItem({ ...p, stockItem: (String(p.id||"").toLowerCase()==="tradicional" || String(p.category||"").toLowerCase().includes("açaí")||String(p.category||"").toLowerCase().includes("acai")) ? true : p.stockItem }) }));
   out.products=out.products.map(p=>String(p.id||"").toLowerCase()==="tradicional"?{...p,category:"Açaí",stockItem:true}:{...p});
@@ -723,10 +739,10 @@ function calculateOperationalCash(){
  const separated=data.cash.filter(x=>x.kind==="profit_withdrawal").reduce((a,x)=>a+x.value,0);
  return Math.max(0,cin-cout-separated);
 }
-function addWorkingCapitalMovement(value,description,kind){
+function addWorkingCapitalMovement(value,description,kind,sourceCashId=null){
   const amount=Number(value||0); if(!amount||amount<0)return;
   data.settings.workingCapitalBalance=Math.max(0,Number(data.settings.workingCapitalBalance||0)+amount*(kind==="withdraw"?-1:1));
-  data.workingCapitalMovements.push({id:Date.now()+Math.random(),date:today(),value:amount,kind,description:description||"Movimento do capital de giro"});
+  data.workingCapitalMovements.push({id:Date.now()+Math.random(),sourceCashId,date:today(),value:amount,kind,description:description||"Movimento do capital de giro"});
 }
 function moveWorkingCapital(e){
   e.preventDefault();
@@ -749,13 +765,15 @@ function moveWorkingCapital(e){
     if(value>available){alert(`O caixa atual tem apenas ${brl(available)} disponíveis para essa reposição.`);return}
     const d=selectedCashDate();
     if(!getCashDay(d)?.opened){alert("Abra o caixa do dia antes de retirar dinheiro dele para o capital de giro.");return}
-    data.cash.push({id:Date.now(),date:d,type:"Saída",value,description:description||"Reposição do capital de giro",kind:"working_capital_deposit"});
-    addWorkingCapitalMovement(value,description||"Reposição do capital de giro","replenish_cash");
+    const cashId=Date.now()+Math.random();
+    data.cash.push({id:cashId,date:d,type:"Saída",value,description:description||"Reposição do capital de giro",kind:"working_capital_deposit"});
+    addWorkingCapitalMovement(value,description||"Reposição do capital de giro","replenish_cash",cashId);
   }else{
     const available=calculateProfitAvailable();
     if(value>available){alert(`O lucro separado disponível é ${brl(available)}.`);return}
-    data.cash.push({id:Date.now(),date:today(),type:"Saída",value,description:description||"Reposição do capital de giro com lucro",kind:"profit_to_capital"});
-    addWorkingCapitalMovement(value,description||"Reposição do capital de giro com lucro","replenish_profit");
+    const cashId=Date.now()+Math.random();
+    data.cash.push({id:cashId,date:today(),type:"Saída",value,description:description||"Reposição do capital de giro com lucro",kind:"profit_to_capital"});
+    addWorkingCapitalMovement(value,description||"Reposição do capital de giro com lucro","replenish_profit",cashId);
   }
   save();e.target.reset();render();alert(`Capital de giro atualizado em ${brl(value)}. 🏦`);
 }
@@ -1200,7 +1218,7 @@ function editProfitCapitalMovement(id){
   const rawDesc=prompt('Descrição:',String(x.description||'Reposição do capital de giro com lucro'));
   if(rawDesc===null)return;
   const description=rawDesc.trim()||'Reposição do capital de giro com lucro';
-  const movement=(data.workingCapitalMovements||[]).find(m=>m.kind==='replenish_profit'&&monthKey(m.date)===monthKey(x.date)&&Number(m.value)===current&&String(m.description||'')===String(x.description||''));
+  const movement=(data.workingCapitalMovements||[]).find(m=>String(m.sourceCashId||'')===String(x.id)) || (data.workingCapitalMovements||[]).find(m=>m.kind==='replenish_profit'&&monthKey(m.date)===monthKey(x.date)&&Number(m.value)===current&&String(m.description||'')===String(x.description||''));
   const diff=value-current;
   data.settings.workingCapitalBalance=Math.max(0,Number(data.settings.workingCapitalBalance||0)+diff);
   if(movement){movement.value=value;movement.description=description;}
@@ -1214,8 +1232,9 @@ function deleteProfitCapitalMovement(id){
   if(!confirm(`Apagar a movimentação "${x.description||'Lucro → Capital de giro'}" de ${brl(x.value)}? O valor voltará para o lucro disponível.`))return;
   const current=Number(x.value||0);
   data.settings.workingCapitalBalance=Math.max(0,Number(data.settings.workingCapitalBalance||0)-current);
-  const mi=(data.workingCapitalMovements||[]).findIndex(m=>m.kind==='replenish_profit'&&monthKey(m.date)===monthKey(x.date)&&Number(m.value)===current&&String(m.description||'')===String(x.description||''));
-  if(mi>=0)data.workingCapitalMovements.splice(mi,1);
+  const mi=(data.workingCapitalMovements||[]).findIndex(m=>String(m.sourceCashId||'')===String(x.id));
+  const fallbackMi=mi>=0?mi:(data.workingCapitalMovements||[]).findIndex(m=>m.kind==='replenish_profit'&&monthKey(m.date)===monthKey(x.date)&&Number(m.value)===current&&String(m.description||'')===String(x.description||''));
+  if(fallbackMi>=0)data.workingCapitalMovements.splice(fallbackMi,1);
   data.cash.splice(i,1);
   save();render();renderProfitMovements();
 }
