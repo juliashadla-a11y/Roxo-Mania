@@ -982,7 +982,14 @@ function currentDayCashAvailable(){
  return Math.max(0,Number(day.opening||0)+cin-cout-sep);
 }
 function currentCashBalance(){return currentDayCashAvailable()}
-function workingCapital(){return Math.max(0,Number(data.settings.workingCapitalBalance)||0)}
+function workingCapital(){
+  const movements=Array.isArray(data.workingCapitalMovements)?data.workingCapitalMovements:[];
+  if(movements.length){
+    const balance=movements.reduce((total,m)=>total+(m.kind==="withdraw"?-1:1)*Number(m.value||0),0);
+    return Math.max(0,balance);
+  }
+  return Math.max(0,Number(data.settings.workingCapitalBalance)||0);
+}
 
 function closeHistoricalCash(date){
   const day=data.cashDays[date];
