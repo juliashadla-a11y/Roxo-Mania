@@ -1180,15 +1180,51 @@ function deleteProfitMovement(id){
   data.cash.splice(i,1);
   save();render();renderProfitMovements();renderFixedBills();
 }
+function editProfitCapitalMovement(id){
+  const x=(data.cash||[]).find(x=>String(x.id)===String(id)&&x.kind==='profit_to_capital');
+  if(!x)return;
+  const current=Number(x.value||0);
+  const rawValue=prompt(`Novo valor para "${x.description||'Lucro → Capital de giro'}":`,current.toFixed(2));
+  if(rawValue===null)return;
+  const value=moneyInput(rawValue);
+  if(!Number.isFinite(value)||value<=0){alert('Digite um valor válido maior que zero.');return}
+  const availableWithoutThis=calculateProfitAvailable()+current;
+  if(value>availableWithoutThis){alert(`O valor informado (${brl(value)}) é maior que o lucro disponível após considerar esta movimentação (${brl(availableWithoutThis)}).`);return}
+  const rawDesc=prompt('Descrição:',String(x.description||'Reposição do capital de giro com lucro'));
+  if(rawDesc===null)return;
+  const description=rawDesc.trim()||'Reposição do capital de giro com lucro';
+  const movement=(data.workingCapitalMovements||[]).find(m=>m.kind==='replenish_profit'&&monthKey(m.date)===monthKey(x.date)&&Number(m.value)===current&&String(m.description||'')===String(x.description||''));
+  const diff=value-current;
+  data.settings.workingCapitalBalance=Math.max(0,Number(data.settings.workingCapitalBalance||0)+diff);
+  if(movement){movement.value=value;movement.description=description;}
+  x.value=value;x.description=description;
+  save();render();renderProfitMovements();
+}
+function deleteProfitCapitalMovement(id){
+  const i=(data.cash||[]).findIndex(x=>String(x.id)===String(id)&&x.kind==='profit_to_capital');
+  if(i<0)return;
+  const x=data.cash[i];
+  if(!confirm(`Apagar a movimentação "${x.description||'Lucro → Capital de giro'}" de ${brl(x.value)}? O valor voltará para o lucro disponível.`))return;
+  const current=Number(x.value||0);
+  data.settings.workingCapitalBalance=Math.max(0,Number(data.settings.workingCapitalBalance||0)-current);
+  const mi=(data.workingCapitalMovements||[]).findIndex(m=>m.kind==='replenish_profit'&&monthKey(m.date)===monthKey(x.date)&&Number(m.value)===current&&String(m.description||'')===String(x.description||''));
+  if(mi>=0)data.workingCapitalMovements.splice(mi,1);
+  data.cash.splice(i,1);
+  save();render();renderProfitMovements();
+}
 function renderProfitMovements(){
   const list=document.getElementById('profitMovementsList'),monthEl=document.getElementById('profitMovementMonth');
   if(!list)return;
   const month=monthEl?.value||today().slice(0,7);if(monthEl)monthEl.value=month;
-  const rows=(data.cash||[]).filter(x=>x.kind==='profit_expense'&&monthKey(x.date)===month).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))||Number(b.id)-Number(a.id));
+  const rows=(data.cash||[]).filter(x=>(x.kind==='profit_expense'||x.kind==='profit_to_capital')&&monthKey(x.date)===month).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))||Number(b.id)-Number(a.id));
   list.innerHTML=rows.length?rows.map(x=>{
-    const fixed=!!x.fixedBillId;
-    return `<div class="item"><div><strong>${fixed?'🏠 ':'💳 '}${esc(x.description||'Saída do lucro')}</strong><small>${dateBR(x.date)}${fixed?' • Conta fixa':''}</small></div><div class="actions"><span class="badge red">- ${brl(x.value)}</span><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="editProfitMovement('${x.id}')">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="deleteProfitMovement('${x.id}')">🗑️ Apagar</button></div></div>`;
-  }).join(''):`<div class='empty'>Nenhuma saída do lucro registrada neste mês.</div>`;
+    const fixed=!!x.fixedBillId, capital=x.kind==='profit_to_capital';
+    const title=capital?'🏦 ':fixed?'🏠 ':'💳 ';
+    const label=capital?'Capital de giro':fixed?'Conta fixa':'Saída do lucro';
+    const edit=capital?`editProfitCapitalMovement('${x.id}')`:`editProfitMovement('${x.id}')`;
+    const del=capital?`deleteProfitCapitalMovement('${x.id}')`:`deleteProfitMovement('${x.id}')`;
+    return `<div class="item"><div><strong>${title}${esc(x.description||(capital?'Lucro → Capital de giro':'Saída do lucro'))}</strong><small>${dateBR(x.date)} • ${label}</small></div><div class="actions"><span class="badge red">- ${brl(x.value)}</span><button class="secondary" style="padding:6px 8px;font-size:11px" onclick="${edit}">✏️ Editar</button><button class="danger" style="padding:6px 8px;font-size:11px" onclick="${del}">🗑️ Apagar</button></div></div>`;
+  }).join(''):`<div class='empty'>Nenhuma movimentação do lucro registrada neste mês.</div>`;
 }
 
 function renderProfitDashboard(){
